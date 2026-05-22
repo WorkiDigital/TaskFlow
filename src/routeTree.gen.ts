@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppOnboardingRouteImport } from './routes/_app.onboarding'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppContractsRouteImport } from './routes/_app.contracts'
 import { Route as AppClientsRouteImport } from './routes/_app.clients'
 
 const AppRoute = AppRouteImport.update({
@@ -23,9 +25,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppOnboardingRoute = AppOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppContractsRoute = AppContractsRouteImport.update({
+  id: '/contracts',
+  path: '/contracts',
   getParentRoute: () => AppRoute,
 } as any)
 const AppClientsRoute = AppClientsRouteImport.update({
@@ -37,26 +49,39 @@ const AppClientsRoute = AppClientsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/clients': typeof AppClientsRoute
+  '/contracts': typeof AppContractsRoute
   '/dashboard': typeof AppDashboardRoute
+  '/onboarding': typeof AppOnboardingRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/clients': typeof AppClientsRoute
+  '/contracts': typeof AppContractsRoute
   '/dashboard': typeof AppDashboardRoute
+  '/onboarding': typeof AppOnboardingRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/_app/clients': typeof AppClientsRoute
+  '/_app/contracts': typeof AppContractsRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/onboarding': typeof AppOnboardingRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/clients' | '/dashboard'
+  fullPaths: '/' | '/clients' | '/contracts' | '/dashboard' | '/onboarding'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/clients' | '/dashboard'
-  id: '__root__' | '/' | '/_app' | '/_app/clients' | '/_app/dashboard'
+  to: '/' | '/clients' | '/contracts' | '/dashboard' | '/onboarding'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/_app/clients'
+    | '/_app/contracts'
+    | '/_app/dashboard'
+    | '/_app/onboarding'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -80,11 +105,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/onboarding': {
+      id: '/_app/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AppOnboardingRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/contracts': {
+      id: '/_app/contracts'
+      path: '/contracts'
+      fullPath: '/contracts'
+      preLoaderRoute: typeof AppContractsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/clients': {
@@ -99,12 +138,16 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppClientsRoute: typeof AppClientsRoute
+  AppContractsRoute: typeof AppContractsRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppOnboardingRoute: typeof AppOnboardingRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppClientsRoute: AppClientsRoute,
+  AppContractsRoute: AppContractsRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppOnboardingRoute: AppOnboardingRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
