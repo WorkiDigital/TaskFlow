@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ProjectTask, mockProjectColumns } from "@/data/mockProjects";
+import { updateProjectTask } from "@/services/projectsService";
 import {
   Sheet,
   SheetContent,
@@ -42,7 +43,7 @@ export function TaskDetailsDrawer({ task, open, onOpenChange, onUpdate, onMove, 
 
   if (!formData) return null;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.title.trim() || !formData.assignee.trim()) {
       toast.error("Título e Responsável são obrigatórios");
       return;
@@ -66,6 +67,23 @@ export function TaskDetailsDrawer({ task, open, onOpenChange, onUpdate, onMove, 
         },
         ...(formData.activity || [])
       ];
+    }
+
+    // Persiste no Supabase se a tarefa tem ID de banco de dados real
+    if (formData.id && !formData.id.startsWith("t-")) {
+      const assigneeMember = members.find(m => (m.full_name || m.email) === formData.assignee);
+      try {
+        await updateProjectTask(formData.id, {
+          title: formData.title,
+          description: formData.description,
+          priority: formData.priority,
+          due_date: formData.dueDate || undefined,
+          assignee_id: assigneeMember?.id,
+        });
+      } catch (err) {
+        console.error("[TaskDetailsDrawer] Erro ao salvar:", err);
+        toast.error("Erro ao salvar no banco. Alterações aplicadas localmente.");
+      }
     }
 
     onUpdate(updatedFormData);

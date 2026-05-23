@@ -79,8 +79,8 @@ serve(async (req) => {
         updated_at: new Date().toISOString(),
       })
       .eq("autentique_document_id", documentId)
-      .select("id, client_id")
-      .maybeSingle<{ id: string; client_id: string | null }>();
+      .select("id, client_id, agency_id")
+      .maybeSingle<{ id: string; client_id: string | null; agency_id: string | null }>();
 
     if (contractError) throw contractError;
 
@@ -102,6 +102,23 @@ serve(async (req) => {
           message: "Webhook do Autentique recebido e contrato marcado como assinado.",
           metadata: { contractId: contract.id, documentId },
         });
+      }
+
+      // Dispara automações com trigger contract_signed
+      if (contract.agency_id) {
+        try {
+          await supabase.functions.invoke("automation-execute", {
+            body: {
+              trigger: "contract_signed",
+              agencyId: contract.agency_id,
+              clientId: contract.client_id,
+              contractId: contract.id,
+            },
+          });
+          console.log("[AutentiqueWebhook] automation-execute disparado para agency:", contract.agency_id);
+        } catch (automationErr) {
+          console.error("[AutentiqueWebhook] Falha ao disparar automation-execute:", automationErr);
+        }
       }
     }
 

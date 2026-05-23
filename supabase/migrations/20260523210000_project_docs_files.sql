@@ -26,15 +26,23 @@ CREATE TABLE IF NOT EXISTS public.project_files (
 ALTER TABLE public.project_docs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.project_files ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Agency members can manage project_docs"
-  ON public.project_docs
-  USING (agency_id = (SELECT agency_id FROM public.users WHERE id = auth.uid()))
-  WITH CHECK (agency_id = (SELECT agency_id FROM public.users WHERE id = auth.uid()));
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Agency members can manage project_docs' AND tablename = 'project_docs') THEN
+    CREATE POLICY "Agency members can manage project_docs"
+      ON public.project_docs
+      USING (agency_id = (SELECT agency_id FROM public.users WHERE id = auth.uid()))
+      WITH CHECK (agency_id = (SELECT agency_id FROM public.users WHERE id = auth.uid()));
+  END IF;
+END$$;
 
-CREATE POLICY "Agency members can manage project_files"
-  ON public.project_files
-  USING (agency_id = (SELECT agency_id FROM public.users WHERE id = auth.uid()))
-  WITH CHECK (agency_id = (SELECT agency_id FROM public.users WHERE id = auth.uid()));
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Agency members can manage project_files' AND tablename = 'project_files') THEN
+    CREATE POLICY "Agency members can manage project_files"
+      ON public.project_files
+      USING (agency_id = (SELECT agency_id FROM public.users WHERE id = auth.uid()))
+      WITH CHECK (agency_id = (SELECT agency_id FROM public.users WHERE id = auth.uid()));
+  END IF;
+END$$;
 
 CREATE INDEX IF NOT EXISTS idx_project_docs_project_id ON public.project_docs(project_id);
 CREATE INDEX IF NOT EXISTS idx_project_docs_agency_id ON public.project_docs(agency_id);

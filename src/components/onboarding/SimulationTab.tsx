@@ -1,11 +1,15 @@
-import { useState, useRef } from 'react';
-import { Play, RotateCcw, ChevronRight, AlertCircle } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Play, RotateCcw, ChevronRight, AlertCircle, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { OnboardingFlowStep } from '@/data/onboardingTypes';
 import type { SimulationLog, SimLogStatus } from '@/data/onboardingTypes';
 import { IconRenderer } from '@/components/ui/IconRenderer';
+import { onboardingService } from '@/services/onboardingService';
+import { supabase } from '@/services/supabase';
+import { toast } from 'sonner';
 
 interface SimulationTabProps {
   steps: OnboardingFlowStep[];
@@ -43,6 +47,38 @@ export function SimulationTab({ steps }: SimulationTabProps) {
   const [done, setDone] = useState(false);
   const [forceError, setForceError] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
+
+  // Real run state
+  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState('');
+  const [realRunning, setRealRunning] = useState(false);
+  const [realLogs, setRealLogs] = useState<string[]>([]);
+
+  useEffect(() => {
+    supabase.from('clients').select('id, name').order('name').then(({ data }) => {
+      if (data) setClients(data);
+    });
+  }, []);
+
+  const dispararReal = async () => {
+    if (!selectedClientId) { toast.error('Selecione um cliente'); return; }
+    setRealRunning(true);
+    setRealLogs([]);
+    try {
+      const res = await onboardingService.startRun(selectedClientId);
+      const lines: string[] = res.logs?.map((l: any) => `[${l.status}] ${l.step_name}: ${l.message}`) ?? [];
+      lines.unshift(`► Run ID: ${res.runId} | Status: ${res.status}`);
+      setRealLogs(lines);
+      if (res.status === 'awaiting_form') toast.success('Fluxo pausado aguardando formulário');
+      else if (res.status === 'completed') toast.success('Onboarding concluído!');
+      else toast.info(`Status: ${res.status}`);
+    } catch (e: any) {
+      toast.error('Erro: ' + (e?.message ?? String(e)));
+      setRealLogs([`ERRO: ${e?.message ?? String(e)}`]);
+    } finally {
+      setRealRunning(false);
+    }
+  };
 
   const activeSteps = steps.filter(s => s.enabled);
   const skippedSteps = steps.filter(s => !s.enabled);
@@ -283,6 +319,56 @@ export function SimulationTab({ steps }: SimulationTabProps) {
           </div>
         </div>
       )}
+
+      {/* ─── Disparo Real ─────────────────────────────────────────────── */}
+      <div className="glass-card p-5 space-y-4 border-primary/20">
+        <div className="flex items-center gap-2">
+          <Zap className="w-4 h-4 text-primary" />
+          <h3 className="font-semibold text-sm">Disparo Real</h3>
+          <Badge variant="outline" className="text-[10px] text-warning border-warning/30 bg-warning/10">Chama a edge function de verdade</Badge>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Selecione um cliente e dispare o fluxo real. A função pausará em <code className="text-primary">await_contractual_form</code> e aguardará o preenchimento do formulário.
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+            <SelectTrigger className="h-8 text-xs w-60 bg-background/50 border-white/10">
+              <SelectValue placeholder="Selecionar cliente..." />
+            </SelectTrigger>
+            <SelectContent className="glass-card">
+              {clients.map(c => (
+                <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
+              ))}
+              {clients.length === 0 && (
+                <SelectItem value="none" disabled className="text-xs">Nenhum cliente cadastrado</SelectItem>
+              )}
+            </SelectContent>
+          </Select>
+          <Button
+            size="sm"
+            onClick={dispararReal}
+            disabled={realRunning || !selectedClientId}
+            className="gap-1.5 bg-primary/90 hover:bg-primary text-xs h-8"
+          >
+            <Zap className="w-3.5 h-3.5" />
+            {realRunning ? 'Disparando...' : 'Disparar onboarding'}
+          </Button>
+        </div>
+
+        {realLogs.length > 0 && (
+          <div className="bg-[oklch(0.13_0.015_270)] rounded-lg p-3 font-mono text-xs space-y-1 max-h-60 overflow-y-auto">
+            {realLogs.map((line, i) => (
+              <div key={i} className={cn(
+                'flex gap-2',
+                line.startsWith('ERRO') ? 'text-destructive' : line.includes('[completed]') ? 'text-success' : line.includes('[skipped]') ? 'text-muted-foreground' : 'text-foreground'
+              )}>
+                <ChevronRight className="w-3 h-3 mt-0.5 shrink-0 text-muted-foreground/40" />
+                <span>{line}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

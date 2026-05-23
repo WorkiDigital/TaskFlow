@@ -34,7 +34,6 @@ export async function getProjects() {
     .from('projects')
     .select(`
       *,
-      project_spaces (name),
       project_columns (*),
       project_tasks (
         *,

@@ -29,6 +29,7 @@ type ClientRow = {
   phone: string | null;
   address: string | null;
   whatsapp_group_id: string | null;
+  agency_id: string | null;
 };
 
 type AgencySettings = {
@@ -89,9 +90,7 @@ async function requestEvolution(url: string, apiKey: string, init?: RequestInit)
 async function requestAutentique(token: string, formData: FormData) {
   const response = await fetch("https://api.autentique.com.br/v2/graphql", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { Authorization: `Bearer ${token}` },
     body: formData,
   });
   const payload = await response.json().catch(() => ({}));
@@ -135,7 +134,6 @@ function extractGroupJid(payload: Record<string, unknown>) {
     (payload.group as Record<string, unknown> | undefined)?.jid,
     (payload.group as Record<string, unknown> | undefined)?.id,
   ];
-
   return candidates.map(value => String(value ?? "")).find(value => value.endsWith("@g.us")) ?? "";
 }
 
@@ -198,17 +196,9 @@ async function logStep(
 ) {
   const { data, error } = await supabase
     .from("onboarding_step_logs")
-    .insert({
-      run_id: runId,
-      step_id: step.id,
-      step_name: step.name,
-      status,
-      message,
-      metadata,
-    })
+    .insert({ run_id: runId, step_id: step.id, step_name: step.name, status, message, metadata })
     .select()
     .single();
-
   if (error) throw error;
   return data;
 }
@@ -222,6 +212,7 @@ serve(async (req) => {
   let runId = "";
   const logs: unknown[] = [];
   let hadSkippedRequiredStep = false;
+  let pausedForForm = false;
 
   try {
     const body = await req.json();
@@ -245,11 +236,7 @@ serve(async (req) => {
     if (!resolvedOrigin) {
       const headerOrigin = req.headers.get("origin") || req.headers.get("referer") || "";
       if (headerOrigin) {
-        try {
-          resolvedOrigin = new URL(headerOrigin).origin;
-        } catch {
-          resolvedOrigin = headerOrigin;
-        }
+        try { resolvedOrigin = new URL(headerOrigin).origin; } catch { resolvedOrigin = headerOrigin; }
       }
     }
 
@@ -269,16 +256,12 @@ serve(async (req) => {
 
     if (steps.length === 0) throw new Error("Nenhuma etapa ativa no onboarding.");
 
+    // Save form submission and patch client fields
     if (action === "form_submitted") {
       if (!formId) throw new Error("Informe formId para registrar o formulario.");
-
       const { error: submissionError } = await supabase
         .from("form_submissions")
-        .insert({
-          form_id: formId,
-          client_id: clientId || null,
-          payload,
-        });
+        .insert({ form_id: formId, client_id: clientId || null, payload });
       if (submissionError) throw submissionError;
 
       if (!clientId) {
@@ -286,10 +269,7 @@ serve(async (req) => {
           runId: null,
           status: "received",
           logs: [{ status: "completed", message: "Formulario recebido, mas sem cliente vinculado para continuar automacao." }],
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        });
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
       }
     }
 
@@ -301,29 +281,54 @@ serve(async (req) => {
     if (submissionValues.email_cliente) clientPatch.email = submissionValues.email_cliente;
     if (submissionValues.telefone_cliente) clientPatch.phone = normalizePhone(submissionValues.telefone_cliente);
     if (submissionValues.endereco_cliente) clientPatch.address = submissionValues.endereco_cliente;
-
     if (action === "form_submitted" && Object.keys(clientPatch).length > 0) {
       await supabase.from("clients").update(clientPatch).eq("id", clientId);
     }
 
     const { data: client, error: clientError } = await supabase
       .from("clients")
-      .select("id, name, email, phone, address, whatsapp_group_id")
+      .select("id, name, email, phone, address, whatsapp_group_id, agency_id")
       .eq("id", clientId)
       .single<ClientRow>();
     if (clientError || !client) throw new Error("Cliente nao encontrado.");
 
-    const { data: run, error: runError } = await supabase
-      .from("onboarding_runs")
-      .insert({
-        client_id: client.id,
-        status: "running",
-        context: { instanceName, action, formId: formId || null },
-      })
-      .select()
-      .single();
-    if (runError) throw runError;
-    runId = run.id;
+    const agencyId = client.agency_id ?? null;
+
+    // Pause/resume: on form_submitted look for an existing awaiting_form run
+    let run: { id: string; context: Record<string, unknown> } | null = null;
+    let runContext: Record<string, unknown> = { instanceName, action, formId: formId || null, agencyId };
+
+    if (action === "form_submitted") {
+      const { data: existingRun } = await supabase
+        .from("onboarding_runs")
+        .select("id, context")
+        .eq("client_id", clientId)
+        .eq("status", "awaiting_form")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingRun) {
+        run = existingRun as { id: string; context: Record<string, unknown> };
+        runId = existingRun.id;
+        runContext = { ...(existingRun.context ?? {}), resumedAt: new Date().toISOString(), formId, action };
+        await supabase
+          .from("onboarding_runs")
+          .update({ status: "running", context: runContext })
+          .eq("id", runId);
+      }
+    }
+
+    if (!run) {
+      const { data: newRun, error: runError } = await supabase
+        .from("onboarding_runs")
+        .insert({ client_id: client.id, status: "running", context: runContext })
+        .select()
+        .single();
+      if (runError) throw runError;
+      run = newRun as { id: string; context: Record<string, unknown> };
+      runId = newRun.id;
+    }
 
     const { data: settings, error: settingsError } = await supabase
       .from("agency_settings")
@@ -341,15 +346,19 @@ serve(async (req) => {
     let clientGroupJid = client.whatsapp_group_id ?? "";
     let generatedContract: { id: string; content: string; signerEmail: string; signerName: string } | null = null;
 
-    const variables = {
+    const variables: Record<string, string> = {
       nome_cliente: client.name,
       email_cliente: client.email ?? "",
       telefone_cliente: clientPhone,
       empresa_cliente: client.address ?? "",
       nome_agencia: settings.name ?? "Agencia",
       nome_projeto: `Projeto ${client.address || client.name}`,
-      link_formulario_contrato: resolvedOrigin ? `${String(resolvedOrigin).replace(/\/$/, "")}/form/${getDefaultFormId(state, "contractual")}?clientId=${client.id}` : "",
-      link_formulario_briefing: resolvedOrigin ? `${String(resolvedOrigin).replace(/\/$/, "")}/form/${getDefaultFormId(state, "briefing")}?clientId=${client.id}` : "",
+      link_formulario_contrato: resolvedOrigin
+        ? `${String(resolvedOrigin).replace(/\/$/, "")}/form/${getDefaultFormId(state, "contractual")}?clientId=${client.id}`
+        : "",
+      link_formulario_briefing: resolvedOrigin
+        ? `${String(resolvedOrigin).replace(/\/$/, "")}/form/${getDefaultFormId(state, "briefing")}?clientId=${client.id}`
+        : "",
       link_google_drive: "",
       ...submissionValues,
     };
@@ -357,12 +366,7 @@ serve(async (req) => {
     async function sendText(number: string, text: string, linkPreview = true) {
       return requestEvolution(`${baseUrl}/message/sendText/${instanceName}`, instanceApiKey, {
         method: "POST",
-        body: JSON.stringify({
-          number,
-          text,
-          delay: 1200,
-          linkPreview,
-        }),
+        body: JSON.stringify({ number, text, delay: 1200, linkPreview }),
       });
     }
 
@@ -371,7 +375,6 @@ serve(async (req) => {
       const receivedFormType = getFormType(state, formId);
       const awaitStepId = receivedFormType === "briefing" ? "await_briefing_form" : "await_contractual_form";
       const awaitStepIndex = steps.findIndex(step => step.id === awaitStepId);
-
       if (awaitStepIndex >= 0) {
         const awaitStep = steps[awaitStepIndex];
         logs.push(await logStep(supabase, runId, awaitStep, "completed", "Formulario recebido. Automacao retomada.", { formId }));
@@ -394,9 +397,22 @@ serve(async (req) => {
           );
           await sendText(clientPhone, text);
           logs.push(await logStep(supabase, runId, step, "completed", "Formulario contratual enviado por WhatsApp."));
-        } else if (step.id === "await_contractual_form") {
-          hadSkippedRequiredStep = true;
-          logs.push(await logStep(supabase, runId, step, "skipped", "Aguardando webhook/formulario real. Etapa registrada como pendente."));
+
+        } else if (step.id === "await_contractual_form" || step.id === "await_briefing_form") {
+          // Pause: mark run as awaiting_form and stop executing further steps
+          const awaitingFormType = step.id.includes("briefing") ? "briefing" : "contractual";
+          await supabase
+            .from("onboarding_runs")
+            .update({
+              status: "awaiting_form",
+              context: { ...runContext, awaitingStep: step.id, awaitingFormType },
+            })
+            .eq("id", runId);
+          logs.push(await logStep(supabase, runId, step, "skipped",
+            "Fluxo pausado. Aguardando preenchimento do formulario antes de continuar."));
+          pausedForForm = true;
+          break;
+
         } else if (step.id === "generate_contract") {
           const { data: template, error: templateError } = await supabase
             .from("contract_templates")
@@ -414,6 +430,7 @@ serve(async (req) => {
             .from("contracts")
             .insert({
               client_id: client.id,
+              agency_id: agencyId,
               template_id: template?.id ?? null,
               status: "draft",
               content,
@@ -430,11 +447,11 @@ serve(async (req) => {
             signerEmail: contract.signer_email ?? signerEmail,
             signerName: contract.signer_name ?? signerName,
           };
-
           logs.push(await logStep(supabase, runId, step, "completed", "Contrato gerado e salvo no banco.", {
             contractId: generatedContract.id,
             templateId: template?.id ?? "default",
           }));
+
         } else if (step.id === "send_contract_signature") {
           if (!settings.autentique_token) {
             hadSkippedRequiredStep = true;
@@ -467,14 +484,8 @@ serve(async (req) => {
           const operations = {
             query: `mutation CreateDocumentMutation($document: DocumentInput!, $signers: [SignerInput!]!, $file: Upload!) {
               createDocument(document: $document, signers: $signers, file: $file) {
-                id
-                name
-                signatures {
-                  public_id
-                  name
-                  email
-                  link { short_link }
-                }
+                id name
+                signatures { public_id name email link { short_link } }
               }
             }`,
             variables: {
@@ -485,8 +496,9 @@ serve(async (req) => {
           };
           const formData = new FormData();
           formData.append("operations", JSON.stringify(operations));
-          formData.append("map", JSON.stringify({ file: ["variables.file"] }));
-          formData.append("file", makeContractFile(generatedContract.content), `contrato-${generatedContract.id}.txt`);
+          // Numeric key "0" per GraphQL multipart upload spec
+          formData.append("map", JSON.stringify({ "0": ["variables.file"] }));
+          formData.append("0", makeContractFile(generatedContract.content), `contrato-${generatedContract.id}.pdf`);
 
           const autentiquePayload = await requestAutentique(settings.autentique_token, formData);
           const document = autentiquePayload?.data?.createDocument ?? {};
@@ -507,6 +519,35 @@ serve(async (req) => {
             documentId: document.id ?? null,
             signatureUrl,
           }));
+
+        } else if (step.id === "confirm_contract_sent_client_group") {
+          if (!clientGroupJid) {
+            hadSkippedRequiredStep = true;
+            logs.push(await logStep(supabase, runId, step, "skipped", "Grupo sem JID — confirmacao nao enviada."));
+            continue;
+          }
+          const { data: contract } = await supabase
+            .from("contracts")
+            .select("signature_url")
+            .eq("client_id", client.id)
+            .in("status", ["sent", "pending"])
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle<{ signature_url: string | null }>();
+
+          const signatureUrl = contract?.signature_url ?? null;
+          if (!signatureUrl) {
+            hadSkippedRequiredStep = true;
+            logs.push(await logStep(supabase, runId, step, "skipped", "Contrato ainda sem link de assinatura gerado."));
+            continue;
+          }
+          const msgTemplate = getMessage(state, "msg_contract_sent",
+            "Ola {{nome_cliente}}! Seu contrato esta pronto para assinatura: {{link_assinatura}}");
+          const text = renderTemplate(msgTemplate, { ...variables, link_assinatura: signatureUrl });
+          await sendText(clientGroupJid, text);
+          logs.push(await logStep(supabase, runId, step, "completed",
+            "Link de assinatura enviado ao grupo do cliente.", { signatureUrl }));
+
         } else if (step.id === "create_whatsapp_group") {
           const config = step.config ?? {};
           const participants = uniqueValues([
@@ -518,53 +559,90 @@ serve(async (req) => {
 
           if (participants.length < 1) throw new Error("Nenhum participante valido para criar o grupo.");
 
-          const payload = await requestEvolution(`${baseUrl}/group/create/${instanceName}`, instanceApiKey, {
+          const groupPayload = await requestEvolution(`${baseUrl}/group/create/${instanceName}`, instanceApiKey, {
             method: "POST",
             body: JSON.stringify({ subject, description, participants }),
           });
 
-          clientGroupJid = extractGroupJid(payload as Record<string, unknown>);
+          clientGroupJid = extractGroupJid(groupPayload as Record<string, unknown>);
           if (clientGroupJid) {
             await supabase.from("clients").update({ whatsapp_group_id: clientGroupJid }).eq("id", client.id);
           }
+          logs.push(await logStep(supabase, runId, step, "completed",
+            "Grupo do cliente criado na Evolution API.", { groupJid: clientGroupJid, subject }));
 
-          logs.push(await logStep(supabase, runId, step, "completed", "Grupo do cliente criado na Evolution API.", { groupJid: clientGroupJid, subject }));
         } else if (step.id === "add_participants") {
           if (!clientGroupJid) {
-            logs.push(await logStep(supabase, runId, step, "skipped", "Grupo do cliente ainda sem JID retornado para adicionar participantes."));
             hadSkippedRequiredStep = true;
+            logs.push(await logStep(supabase, runId, step, "skipped", "Grupo sem JID — participantes nao podem ser adicionados."));
             continue;
           }
-          logs.push(await logStep(supabase, runId, step, "completed", "Participantes incluidos na criacao do grupo."));
+          const extraParticipants = uniqueValues(
+            (Array.isArray(step.config?.participants) ? (step.config!.participants as unknown[]).map(String) : [])
+              .map(normalizePhone)
+          ).filter(p => p && p !== clientPhone);
+
+          if (extraParticipants.length > 0) {
+            await requestEvolution(`${baseUrl}/group/updateParticipant/${instanceName}`, instanceApiKey, {
+              method: "PUT",
+              body: JSON.stringify({ groupJid: clientGroupJid, action: "add", participants: extraParticipants }),
+            });
+            logs.push(await logStep(supabase, runId, step, "completed",
+              `${extraParticipants.length} participante(s) adicional(is) adicionado(s) ao grupo.`,
+              { groupJid: clientGroupJid, extraParticipants }));
+          } else {
+            logs.push(await logStep(supabase, runId, step, "completed",
+              "Nenhum participante extra configurado. Cliente ja foi adicionado na criacao do grupo."));
+          }
+
         } else if (step.id === "update_group_description") {
           if (!clientGroupJid) {
-            logs.push(await logStep(supabase, runId, step, "skipped", "Grupo do cliente ainda sem JID para atualizar descricao."));
             hadSkippedRequiredStep = true;
+            logs.push(await logStep(supabase, runId, step, "skipped", "Grupo sem JID — descricao nao pode ser atualizada."));
             continue;
           }
-          logs.push(await logStep(supabase, runId, step, "skipped", "Descricao ja enviada na criacao do grupo. Atualizacao separada ainda nao foi necessaria."));
+          const description = renderTemplate(
+            String(step.config?.description ?? "Grupo oficial de acompanhamento do projeto {{nome_projeto}}."),
+            variables,
+          );
+          await requestEvolution(`${baseUrl}/group/updateGroupDescription/${instanceName}`, instanceApiKey, {
+            method: "PUT",
+            body: JSON.stringify({ groupJid: clientGroupJid, description }),
+          });
+          logs.push(await logStep(supabase, runId, step, "completed",
+            "Descricao do grupo atualizada.", { groupJid: clientGroupJid }));
+
         } else if (step.id === "send_welcome_message") {
           if (!clientGroupJid) {
-            logs.push(await logStep(supabase, runId, step, "skipped", "Grupo do cliente ainda sem JID para mensagem de boas-vindas."));
             hadSkippedRequiredStep = true;
+            logs.push(await logStep(supabase, runId, step, "skipped", "Grupo sem JID para mensagem de boas-vindas."));
             continue;
           }
-          const text = renderTemplate(getMessage(state, "msg_welcome", "Bem-vindo ao projeto {{nome_projeto}}, {{nome_cliente}}!"), variables);
+          const text = renderTemplate(
+            getMessage(state, "msg_welcome", "Bem-vindo ao projeto {{nome_projeto}}, {{nome_cliente}}!"),
+            variables,
+          );
           await sendText(clientGroupJid, text);
           logs.push(await logStep(supabase, runId, step, "completed", "Mensagem de boas-vindas enviada no grupo do cliente."));
+
         } else if (step.id === "notify_internal_group") {
           const internalGroupId = String(step.config?.internalGroupId ?? "");
           if (!internalGroupId) {
-            logs.push(await logStep(supabase, runId, step, "skipped", "Grupo interno nao selecionado."));
             hadSkippedRequiredStep = true;
+            logs.push(await logStep(supabase, runId, step, "skipped", "Grupo interno nao selecionado."));
             continue;
           }
-          const text = renderTemplate(getMessage(state, "msg_internal_notify", "Novo cliente onboardado: {{nome_cliente}}"), variables);
+          const text = renderTemplate(
+            getMessage(state, "msg_internal_notify", "Novo cliente onboardado: {{nome_cliente}}"),
+            variables,
+          );
           await sendText(internalGroupId, text);
           logs.push(await logStep(supabase, runId, step, "completed", "Grupo interno notificado."));
+
         } else if (step.id === "send_briefing_form") {
           if (!clientPhone) throw new Error("Cliente sem telefone para envio do briefing.");
-          const template = getMessage(state, "msg_send_briefing", "Preencha o briefing do projeto, {{nome_cliente}}: {{link_formulario_briefing}}");
+          const template = getMessage(state, "msg_send_briefing",
+            "Preencha o briefing do projeto, {{nome_cliente}}: {{link_formulario_briefing}}");
           const text = renderTemplate(
             template
               .replace("[Clique aqui para preencher]", "{{link_formulario_briefing}}")
@@ -573,28 +651,145 @@ serve(async (req) => {
           );
           await sendText(clientPhone, text);
           logs.push(await logStep(supabase, runId, step, "completed", "Formulario de briefing enviado por WhatsApp."));
-        } else if (step.id === "await_briefing_form") {
-          hadSkippedRequiredStep = true;
-          logs.push(await logStep(supabase, runId, step, "skipped", "Aguardando webhook/formulario de briefing real."));
+
         } else if (step.id === "finalize_onboarding") {
-          logs.push(await logStep(supabase, runId, step, "completed", "Execucao de onboarding finalizada."));
+          // Create project from operational template configured on step (or first available)
+          const templateId = String(step.config?.templateId ?? "");
+          const baseQuery = supabase
+            .from("agency_templates")
+            .select("*, template_columns(*), template_tasks(*, template_task_checklists(*))");
+          const { data: tmpl } = templateId
+            ? await baseQuery.eq("id", templateId).maybeSingle()
+            : await baseQuery.order("created_at", { ascending: false }).limit(1).maybeSingle();
+
+          if (!tmpl) {
+            logs.push(await logStep(supabase, runId, step, "completed",
+              "Onboarding finalizado. Nenhum template operacional configurado — projeto nao criado automaticamente."));
+          } else {
+            const projectName = renderTemplate(
+              String(step.config?.projectNamePattern ?? tmpl.name ?? "Projeto {{nome_cliente}}"),
+              variables,
+            );
+            const { data: project, error: projError } = await supabase
+              .from("projects")
+              .insert({
+                agency_id: agencyId,
+                client_id: client.id,
+                name: projectName,
+                description: tmpl.description ?? null,
+                status: "planning",
+                source: "automation",
+                template_id: tmpl.id,
+              })
+              .select()
+              .single();
+            if (projError) throw projError;
+
+            // Create columns
+            const colMap: Record<string, string> = {};
+            for (const col of (tmpl.template_columns ?? [])) {
+              const { data: newCol } = await supabase
+                .from("project_columns")
+                .insert({
+                  agency_id: agencyId,
+                  project_id: project.id,
+                  title: col.title,
+                  position: col.position,
+                  color: col.color ?? null,
+                })
+                .select()
+                .single();
+              if (newCol) colMap[col.id] = newCol.id;
+            }
+
+            // Create tasks with assignee resolution
+            for (const task of (tmpl.template_tasks ?? [])) {
+              let assigneeId: string | null = null;
+              const rule = task.assignee_rule as { type?: string; value?: string; fallback?: string } | null;
+
+              if (rule?.type === "specific_user" && rule.value) {
+                assigneeId = rule.value;
+              } else if (rule?.type === "role" && rule.value && agencyId) {
+                const { data: roleData } = await supabase
+                  .from("agency_roles").select("id")
+                  .eq("agency_id", agencyId).eq("name", rule.value).maybeSingle();
+                if (roleData) {
+                  const { data: member } = await supabase
+                    .from("users").select("id")
+                    .eq("agency_id", agencyId).eq("agency_role_id", roleData.id).limit(1).maybeSingle();
+                  if (member) assigneeId = member.id;
+                }
+              } else if (rule?.type === "project_manager" && agencyId) {
+                const { data: manager } = await supabase
+                  .from("users").select("id")
+                  .eq("agency_id", agencyId).in("role", ["owner", "admin", "manager"]).limit(1).maybeSingle();
+                if (manager) assigneeId = manager.id;
+              }
+
+              if (!assigneeId && rule?.fallback !== "unassigned" && agencyId) {
+                const { data: fallback } = await supabase
+                  .from("users").select("id")
+                  .eq("agency_id", agencyId).in("role", ["owner", "admin"]).limit(1).maybeSingle();
+                if (fallback) assigneeId = fallback.id;
+              }
+
+              const { data: newTask } = await supabase
+                .from("project_tasks")
+                .insert({
+                  agency_id: agencyId,
+                  project_id: project.id,
+                  column_id: colMap[task.column_id ?? ""] ?? null,
+                  title: renderTemplate(task.title ?? "", variables),
+                  description: task.description ?? null,
+                  priority: task.priority ?? "medium",
+                  status: "backlog",
+                  assignee_id: assigneeId,
+                  source: "template",
+                })
+                .select()
+                .single();
+
+              // Create checklists
+              if (newTask && (task.template_task_checklists?.length ?? 0) > 0) {
+                for (const item of task.template_task_checklists) {
+                  await supabase.from("project_task_checklists").insert({
+                    task_id: newTask.id,
+                    title: renderTemplate(item.title ?? "", variables),
+                    is_checked: false,
+                  });
+                }
+              }
+            }
+
+            logs.push(await logStep(supabase, runId, step, "completed",
+              `Onboarding finalizado. Projeto "${projectName}" criado com ${tmpl.template_tasks?.length ?? 0} tarefa(s).`,
+              { projectId: project.id, templateId: tmpl.id }));
+          }
+
         } else {
           hadSkippedRequiredStep = true;
           logs.push(await logStep(supabase, runId, step, "skipped", "Etapa ainda sem executor real."));
         }
       } catch (stepError) {
-        logs.push(await logStep(supabase, runId, step, "failed", stepError instanceof Error ? stepError.message : String(stepError)));
+        logs.push(await logStep(supabase, runId, step, "failed",
+          stepError instanceof Error ? stepError.message : String(stepError)));
         throw stepError;
       }
     }
 
-    const finalStatus = hadSkippedRequiredStep ? "partial" : "completed";
-    await supabase
-      .from("onboarding_runs")
-      .update({ status: finalStatus, completed_at: new Date().toISOString() })
-      .eq("id", runId);
+    // Don't overwrite awaiting_form status
+    if (!pausedForForm) {
+      const finalStatus = hadSkippedRequiredStep ? "partial" : "completed";
+      await supabase
+        .from("onboarding_runs")
+        .update({ status: finalStatus, completed_at: new Date().toISOString() })
+        .eq("id", runId);
+    }
 
-    return new Response(JSON.stringify({ runId, status: finalStatus, logs }), {
+    const { data: finalRun } = await supabase
+      .from("onboarding_runs").select("status").eq("id", runId).single();
+
+    return new Response(JSON.stringify({ runId, status: finalRun?.status ?? "completed", logs }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
@@ -609,10 +804,9 @@ serve(async (req) => {
         })
         .eq("id", runId);
     }
-
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error), runId: runId || null, logs }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 400,
-    });
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : String(error), runId: runId || null, logs }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
+    );
   }
 });

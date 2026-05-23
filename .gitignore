@@ -23,6 +23,10 @@ dist-ssr
 .dev.vars
 supabase/.temp/
 
+# IDE / AI assistant files
+.claude/
+scratch/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

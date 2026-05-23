@@ -33,28 +33,35 @@ serve(async (req) => {
 
     logs.push(`[AutomationExecute] Trigger recebido: ${trigger} para agency: ${agencyId}`);
 
-    // 1. Fetch active automation flows and steps for this trigger
-    // Since we don't have a direct link between trigger and flow in mockAutomations right now
-    // We assume there's a table automation_flows or we fetch steps.
-    // For now, let's query automation_steps where config.trigger matches or simply mock the fetch based on our schema.
-    // The plan states "A tabela automation_steps deve suportar configuração JSON".
+    // 1. Fetch active automation flows matching the trigger
     const { data: flows, error: flowsError } = await supabase
       .from('automation_flows')
-      .select('id, name')
+      .select('id, name, trigger')
       .eq('agency_id', agencyId)
-      .eq('status', 'active');
-      
+      .eq('status', 'active')
+      .eq('trigger', trigger);
+
     if (flowsError && flowsError.code !== '42P01') {
-      console.warn("Could not fetch automation_flows, maybe table doesn't exist yet", flowsError);
+      console.warn("[AutomationExecute] Could not fetch automation_flows:", flowsError);
     }
 
-    // 2. We look for 'apply_agency_template' steps
-    // Since this is an MVP execution, we'll try to find any step that matches 'apply_agency_template'
+    const flowIds = (flows ?? []).map((f: { id: string }) => f.id);
+    logs.push(`[AutomationExecute] Flows com trigger "${trigger}": ${flowIds.length}`);
+
+    if (flowIds.length === 0) {
+      return new Response(JSON.stringify({ status: "no_flows", logs }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
+    // 2. Fetch enabled steps belonging to those flows
     const { data: steps, error: stepsError } = await supabase
       .from('automation_steps')
       .select('*')
       .eq('agency_id', agencyId)
       .eq('enabled', true)
+      .in('flow_id', flowIds)
       .in('type', ['apply_agency_template', 'create_recurring_task']);
 
     if (stepsError && stepsError.code !== '42P01') {

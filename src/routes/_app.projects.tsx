@@ -154,10 +154,17 @@ function ProjectsWorkspace() {
   useEffect(() => {
     let cancelled = false;
     setLoadingData(true);
-    Promise.all([getProjectSpaces(), getProjects()])
-      .then(([spaces, projects]) => {
+
+    const loadAll = async () => {
+      try {
+        const spaces = await getProjectSpaces();
+        if (!cancelled) setSpacesList(spaces.map(mapDbToSpace));
+      } catch (e) {
+        console.error('[Projects] Erro ao carregar pastas:', e);
+      }
+      try {
+        const projects = await getProjects();
         if (cancelled) return;
-        setSpacesList(spaces.map(mapDbToSpace));
         const mappedProjects = projects.map(mapDbToProject);
         setProjectsList(mappedProjects);
         const allDbTasks = projects.flatMap((p: any) =>
@@ -167,9 +174,14 @@ function ProjectsWorkspace() {
         if (!activeProjectId && mappedProjects.length > 0) {
           setActiveProjectId(mappedProjects[0].id);
         }
-      })
-      .catch(e => console.error('[Projects] Erro ao carregar dados:', e))
-      .finally(() => { if (!cancelled) setLoadingData(false); });
+      } catch (e) {
+        console.error('[Projects] Erro ao carregar listas:', e);
+      } finally {
+        if (!cancelled) setLoadingData(false);
+      }
+    };
+
+    loadAll();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [members]);
@@ -337,8 +349,10 @@ function ProjectsWorkspace() {
       setProjectsList(prev => [...prev, newProject]);
       setActiveProjectId(newProject.id);
       toast.success(`Lista "${name}" criada!`);
-    } catch (e) {
-      toast.error("Erro ao criar lista: " + String(e));
+    } catch (e: any) {
+      const msg = e?.message ?? e?.details ?? String(e);
+      console.error("[handleAddProject] erro completo:", e);
+      toast.error("Erro ao criar lista: " + msg);
     }
   };
 
