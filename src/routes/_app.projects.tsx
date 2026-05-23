@@ -38,12 +38,7 @@ function ProjectsWorkspace() {
         return JSON.parse(saved);
       }
       
-      const defaultSpaces = [
-        { id: 'sp-1', name: 'Marketing', color: 'bg-pink-500' },
-        { id: 'sp-2', name: 'Tráfego Pago', color: 'bg-blue-500' },
-        { id: 'sp-3', name: 'Design', color: 'bg-purple-500' },
-        { id: 'sp-4', name: 'Lançamentos', color: 'bg-orange-500' }
-      ];
+      const defaultSpaces: Space[] = [];
       localStorage.setItem("taskflow_spaces", JSON.stringify(defaultSpaces));
       return defaultSpaces;
     } catch (e) {
