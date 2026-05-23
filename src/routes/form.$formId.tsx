@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { onboardingService } from "@/services/onboardingService";
 import { supabase } from "@/services/supabase";
 import { initialOnboardingState } from "@/data/mockOnboardingData";
 import type { FormField, FormTemplate, OnboardingWorkspaceState } from "@/data/onboardingTypes";
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/form/$formId")({
 
 function PublicFormPage() {
   const { formId } = Route.useParams();
+  const clientId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("clientId") : null;
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -76,22 +78,20 @@ function PublicFormPage() {
       ]),
     );
 
-    const { error } = await supabase
-      .from("form_submissions")
-      .insert({
-        form_id: formTemplate.id,
+    try {
+      await onboardingService.submitPublicForm({
+        formId: formTemplate.id,
+        clientId,
         payload,
       });
-
-    setSubmitting(false);
-
-    if (error) {
+      setSubmitted(true);
+    } catch (error) {
       console.error(error);
-      toast.error("Nao foi possivel enviar o formulario.");
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel enviar o formulario.");
+    } finally {
+      setSubmitting(false);
       return;
     }
-
-    setSubmitted(true);
   };
 
   if (loading) {

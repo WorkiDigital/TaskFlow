@@ -18,6 +18,7 @@ type FlowStep = {
 
 type WorkspaceState = {
   flowSteps?: FlowStep[];
+  formTemplates?: Array<{ id: string; type: "contractual" | "briefing"; isDefault?: boolean }>;
   messages?: Array<{ id: string; body: string }>;
 };
 
@@ -48,6 +49,10 @@ function getSupabaseAdmin() {
 
 function normalizePhone(value?: string | null) {
   return String(value ?? "").replace(/\D/g, "");
+}
+
+function uniqueValues(values: string[]) {
+  return [...new Set(values.filter(Boolean))];
 }
 
 function renderTemplate(template: string, variables: Record<string, string>) {
@@ -112,6 +117,28 @@ function getMessage(state: WorkspaceState, id: string, fallback: string) {
   return state.messages?.find(message => message.id === id)?.body ?? fallback;
 }
 
+function getPayloadValues(payload: Record<string, unknown>) {
+  return Object.fromEntries(Object.entries(payload).map(([key, item]) => {
+    const value = item && typeof item === "object" && "value" in item
+      ? (item as { value?: unknown }).value
+      : item;
+    return [key, String(value ?? "")];
+  }));
+}
+
+function getDefaultFormId(state: WorkspaceState, type: "contractual" | "briefing") {
+  const forms = state.formTemplates ?? [];
+  return forms.find(form => form.type === type && form.isDefault)?.id
+    ?? forms.find(form => form.type === type)?.id
+    ?? (type === "contractual" ? "form_contractual_default" : "form_briefing_default");
+}
+
+function getFormType(state: WorkspaceState, formId: string): "contractual" | "briefing" {
+  const form = state.formTemplates?.find(item => item.id === formId);
+  if (form?.type) return form.type;
+  return formId.includes("briefing") ? "briefing" : "contractual";
+}
+
 async function logStep(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   runId: string,
@@ -148,16 +175,24 @@ serve(async (req) => {
   let hadSkippedRequiredStep = false;
 
   try {
-    const { action, clientId, instanceName = "TaskFlow-Evolution-1" } = await req.json();
-    if (action !== "start") throw new Error("Acao invalida para onboarding-execute.");
-    if (!clientId) throw new Error("Informe clientId para iniciar o onboarding.");
+    const body = await req.json();
+    const {
+      action,
+      clientId,
+      instanceName = "TaskFlow-Evolution-1",
+      appOrigin = "",
+      formId = "",
+      payload = {},
+    } = body as {
+      action: "start" | "form_submitted";
+      clientId?: string | null;
+      instanceName?: string;
+      appOrigin?: string;
+      formId?: string;
+      payload?: Record<string, unknown>;
+    };
 
-    const { data: client, error: clientError } = await supabase
-      .from("clients")
-      .select("id, name, email, phone, address, whatsapp_group_id")
-      .eq("id", clientId)
-      .single<ClientRow>();
-    if (clientError || !client) throw new Error("Cliente nao encontrado.");
+    if (!["start", "form_submitted"].includes(action)) throw new Error("Acao invalida para onboarding-execute.");
 
     const { data: workspaceRow, error: workspaceError } = await supabase
       .from("onboarding_workspace")
@@ -173,12 +208,56 @@ serve(async (req) => {
 
     if (steps.length === 0) throw new Error("Nenhuma etapa ativa no onboarding.");
 
+    if (action === "form_submitted") {
+      if (!formId) throw new Error("Informe formId para registrar o formulario.");
+
+      const { error: submissionError } = await supabase
+        .from("form_submissions")
+        .insert({
+          form_id: formId,
+          client_id: clientId || null,
+          payload,
+        });
+      if (submissionError) throw submissionError;
+
+      if (!clientId) {
+        return new Response(JSON.stringify({
+          runId: null,
+          status: "received",
+          logs: [{ status: "completed", message: "Formulario recebido, mas sem cliente vinculado para continuar automacao." }],
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+    }
+
+    if (!clientId) throw new Error("Informe clientId para iniciar o onboarding.");
+
+    const submissionValues = getPayloadValues(payload);
+    const clientPatch: Record<string, string> = {};
+    if (submissionValues.nome_cliente) clientPatch.name = submissionValues.nome_cliente;
+    if (submissionValues.email_cliente) clientPatch.email = submissionValues.email_cliente;
+    if (submissionValues.telefone_cliente) clientPatch.phone = normalizePhone(submissionValues.telefone_cliente);
+    if (submissionValues.endereco_cliente) clientPatch.address = submissionValues.endereco_cliente;
+
+    if (action === "form_submitted" && Object.keys(clientPatch).length > 0) {
+      await supabase.from("clients").update(clientPatch).eq("id", clientId);
+    }
+
+    const { data: client, error: clientError } = await supabase
+      .from("clients")
+      .select("id, name, email, phone, address, whatsapp_group_id")
+      .eq("id", clientId)
+      .single<ClientRow>();
+    if (clientError || !client) throw new Error("Cliente nao encontrado.");
+
     const { data: run, error: runError } = await supabase
       .from("onboarding_runs")
       .insert({
         client_id: client.id,
         status: "running",
-        context: { instanceName },
+        context: { instanceName, action, formId: formId || null },
       })
       .select()
       .single();
@@ -207,8 +286,10 @@ serve(async (req) => {
       empresa_cliente: client.address ?? "",
       nome_agencia: settings.name ?? "Agencia",
       nome_projeto: `Projeto ${client.address || client.name}`,
-      link_formulario_contrato: "",
+      link_formulario_contrato: appOrigin ? `${String(appOrigin).replace(/\/$/, "")}/form/${getDefaultFormId(state, "contractual")}?clientId=${client.id}` : "",
+      link_formulario_briefing: appOrigin ? `${String(appOrigin).replace(/\/$/, "")}/form/${getDefaultFormId(state, "briefing")}?clientId=${client.id}` : "",
       link_google_drive: "",
+      ...submissionValues,
     };
 
     async function sendText(number: string, text: string, linkPreview = true) {
@@ -223,13 +304,30 @@ serve(async (req) => {
       });
     }
 
-    for (const step of steps) {
+    let executableSteps = steps;
+    if (action === "form_submitted") {
+      const receivedFormType = getFormType(state, formId);
+      const awaitStepId = receivedFormType === "briefing" ? "await_briefing_form" : "await_contractual_form";
+      const awaitStepIndex = steps.findIndex(step => step.id === awaitStepId);
+
+      if (awaitStepIndex >= 0) {
+        const awaitStep = steps[awaitStepIndex];
+        logs.push(await logStep(supabase, runId, awaitStep, "completed", "Formulario recebido. Automacao retomada.", { formId }));
+        executableSteps = steps.slice(awaitStepIndex + 1);
+      }
+    }
+
+    for (const step of executableSteps) {
       logs.push(await logStep(supabase, runId, step, "running", "Executando etapa..."));
 
       try {
         if (step.id === "send_contractual_form") {
           if (!clientPhone) throw new Error("Cliente sem telefone para envio do formulario contratual.");
-          const text = renderTemplate(getMessage(state, "msg_send_contractual", "Ola, {{nome_cliente}}! Vamos iniciar seu onboarding."), variables);
+          const template = getMessage(state, "msg_send_contractual", "Ola, {{nome_cliente}}! Vamos iniciar seu onboarding: {{link_formulario_contrato}}");
+          const text = renderTemplate(
+            template.replace("[Clique aqui para preencher]", "{{link_formulario_contrato}}"),
+            variables,
+          );
           await sendText(clientPhone, text);
           logs.push(await logStep(supabase, runId, step, "completed", "Formulario contratual enviado por WhatsApp."));
         } else if (step.id === "await_contractual_form") {
@@ -245,10 +343,10 @@ serve(async (req) => {
             : "Autentique ainda nao configurado para envio real."));
         } else if (step.id === "create_whatsapp_group") {
           const config = step.config ?? {};
-          const participants = [
+          const participants = uniqueValues([
             ...(Array.isArray(config.participants) ? config.participants.map(String) : []),
             clientPhone,
-          ].map(normalizePhone).filter(Boolean);
+          ].map(normalizePhone));
           const subject = renderTemplate(String(config.groupName ?? "Projeto {{nome_projeto}}"), variables);
           const description = renderTemplate(String(config.description ?? "Grupo oficial de acompanhamento do projeto."), variables);
 
@@ -300,7 +398,11 @@ serve(async (req) => {
           logs.push(await logStep(supabase, runId, step, "completed", "Grupo interno notificado."));
         } else if (step.id === "send_briefing_form") {
           if (!clientPhone) throw new Error("Cliente sem telefone para envio do briefing.");
-          const text = renderTemplate(getMessage(state, "msg_send_briefing", "Preencha o briefing do projeto, {{nome_cliente}}."), variables);
+          const template = getMessage(state, "msg_send_briefing", "Preencha o briefing do projeto, {{nome_cliente}}: {{link_formulario_briefing}}");
+          const text = renderTemplate(
+            template.replace("[Clique aqui para preencher]", "{{link_formulario_briefing}}"),
+            variables,
+          );
           await sendText(clientPhone, text);
           logs.push(await logStep(supabase, runId, step, "completed", "Formulario de briefing enviado por WhatsApp."));
         } else if (step.id === "await_briefing_form") {

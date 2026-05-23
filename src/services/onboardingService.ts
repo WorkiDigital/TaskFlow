@@ -65,6 +65,18 @@ export const onboardingService = {
     return invoke<{ runId: string; status: string; logs: OnboardingRunLog[] }>('onboarding-execute', {
       action: 'start',
       clientId,
+      appOrigin: window.location.origin,
+    });
+  },
+
+  async submitPublicForm(input: {
+    formId: string;
+    clientId: string | null;
+    payload: Record<string, unknown>;
+  }) {
+    return invoke<{ runId: string | null; status: string; logs: OnboardingRunLog[] }>('onboarding-execute', {
+      action: 'form_submitted',
+      ...input,
     });
   },
 
