@@ -8,6 +8,7 @@
 
 import { supabase } from "@/services/supabase";
 import type { Contract, ContractStatus } from "@/lib/types";
+import { getCurrentUserAgency } from "@/lib/auth";
 
 /**
  * Tipo de retorno genérico usado nas funções de serviço.
@@ -22,7 +23,7 @@ export interface ServiceResult<T> {
  */
 export interface CreateContractDraftInput {
   title: string;
-  client_id: string;
+  client_id?: string;
   client_name?: string;
   value?: number;
   content?: string;
@@ -59,97 +60,25 @@ export async function sendContractToAutentique(
   contractId: string,
   fileUrl?: string,
 ): Promise<ServiceResult<AutentiqueResult>> {
-  // 1️⃣ Busca contrato
-  const { data: contract, error: contractError } = await supabase
-    .from('contracts')
-    .select('content, signer_email, signer_name, client_id')
-    .eq('id', contractId)
-    .maybeSingle();
-  if (contractError) return { error: contractError.message };
-  if (!contract) return { error: 'Contrato não encontrado' };
+  console.log("[ContractsService] sendContractToAutentique via Edge Function:", contractId);
 
-  // 2️⃣ Busca token Autentique nas configurações da agência
-  const { data: settings, error: settingsError } = await supabase
-    .from('agency_settings')
-    .select('autentique_token')
-    .limit(1)
-    .single();
-  if (settingsError) return { error: settingsError.message };
-  const token = settings?.autentique_token;
-  if (!token) return { error: 'Token Autentique não configurado' };
+  const { data, error } = await supabase.functions.invoke("contract-send-autentique", {
+    body: { contractId, fileUrl: fileUrl || null },
+  });
 
-  // 3️⃣ Prepara o upload do documento
-  const makeContractFile = (content: string) => new Blob([content], { type: 'text/plain;charset=utf-8' });
-  const operations = {
-    query: `mutation CreateDocumentMutation($document: DocumentInput!, $signers: [SignerInput!]!, $file: Upload!) {
-      createDocument(document: $document, signers: $signers, file: $file) {
-        id
-        name
-        signatures { public_id name email link { short_link } }
-      }
-    }`,
-    variables: {
-      document: { name: `Contrato - ${contract.signer_name ?? 'Cliente'}` },
-      signers: [{ email: contract.signer_email ?? '', name: contract.signer_name ?? '', action: 'SIGN' }],
-      file: null,
-    },
-  };
-
-  const formData = new FormData();
-  formData.append('operations', JSON.stringify(operations));
-  formData.append('map', JSON.stringify({ file: ['variables.file'] }));
-
-  // Se houver URL de arquivo, tenta obter o conteúdo, caso contrário usa o texto do contrato
-  let fileContent = contract.content ?? '';
-  if (fileUrl) {
-    try {
-      const resp = await fetch(fileUrl);
-      if (resp.ok) fileContent = await resp.text();
-    } catch (_) {
-      // Ignora falha e continua com o conteúdo do contrato
+  if (error) {
+    const ctx = (error as { context?: unknown }).context;
+    if (ctx instanceof Response) {
+      const payload = await ctx.json().catch(() => null) as { error?: string } | null;
+      return { error: payload?.error ?? error.message };
     }
+    return { error: error.message };
   }
-  formData.append('file', makeContractFile(fileContent), `contrato-${contractId}.txt`);
 
-  // 4️⃣ Faz a chamada ao Autentique
-  const requestAutentique = async (token: string, formData: FormData) => {
-    const response = await fetch('https://api.autentique.com.br/v2/graphql', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok || payload.errors) {
-      const message = Array.isArray(payload.errors)
-        ? payload.errors.map((i: any) => i.message).filter(Boolean).join(' ')
-        : payload.message;
-      throw new Error(message || `Autentique retornou HTTP ${response.status}`);
-    }
-    return payload;
-  };
+  const result = data as { error?: string; documentId?: string; signatureUrl?: string };
+  if (result?.error) return { error: result.error };
 
-  try {
-    const autentiquePayload = await requestAutentique(token, formData);
-    const document = autentiquePayload?.data?.createDocument ?? {};
-    const signatureUrl = document?.signatures?.[0]?.link?.short_link ?? null;
-
-    // 5️⃣ Atualiza contrato no Supabase
-    const { error: updateError } = await supabase
-      .from('contracts')
-      .update({
-        status: 'sent',
-        autentique_document_id: document.id ?? null,
-        signature_url: signatureUrl,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', contractId);
-    if (updateError) return { error: updateError.message };
-
-    return { data: { documentId: document.id ?? null, signatureUrl } };
-  } catch (e) {
-    const err = e as Error;
-    return { error: err.message };
-  }
+  return { data: { documentId: result.documentId ?? null, signatureUrl: result.signatureUrl ?? null } };
 }
 
 /**
@@ -181,15 +110,23 @@ export interface UpdateContractTemplateInput {
 /**                         CONTRATOS                           */
 /** ------------------------------------------------------------ */
 
-/** Lista todos os contratos. */
+/** Lista todos os contratos da agência atual. */
 export async function listContracts(): Promise<ServiceResult<Contract[]>> {
   console.log("[ContractsService] listContracts chamado");
-  const { data, error } = await supabase.from("contracts").select("*");
-  if (error) {
-    console.error("[ContractsService] Erro ao listar contratos:", error.message);
-    return { error: error.message };
+  try {
+    const { agencyId } = await getCurrentUserAgency();
+    const { data, error } = await supabase
+      .from("contracts")
+      .select("*")
+      .eq("agency_id", agencyId);
+    if (error) {
+      console.error("[ContractsService] Erro ao listar contratos:", error.message);
+      return { error: error.message };
+    }
+    return { data: data as Contract[] };
+  } catch (e) {
+    return { error: String(e) };
   }
-  return { data: data as Contract[] };
 }
 
 /** Busca um contrato pelo ID. */
@@ -213,8 +150,16 @@ export async function createDraft(
   input: CreateContractDraftInput,
 ): Promise<ServiceResult<Contract>> {
   console.log("[ContractsService] createDraft", input);
+  // client_name não é coluna do banco — removido antes do insert
+  const { client_name: _ignored, ...rest } = input;
+  let agencyId: string | undefined;
+  try {
+    const ctx = await getCurrentUserAgency();
+    agencyId = ctx.agencyId;
+  } catch (_) {}
   const payload = {
-    ...input,
+    ...rest,
+    ...(agencyId ? { agency_id: agencyId } : {}),
     status: "draft" as ContractStatus,
     created_at: new Date().toISOString(),
   };

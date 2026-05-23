@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ProjectTask, TaskStatus, TaskPriority, mockProjectColumns } from "@/data/mockProjects";
+import { createProjectTask } from "@/services/projectsService";
 import {
   Dialog,
   DialogContent,
@@ -49,45 +50,51 @@ export function CreateTaskModal({ open, onOpenChange, projectId, onCreate, defau
     }
   }, [open, defaultStatus, defaultDueDate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title.trim() || !form.assignee.trim()) {
-      toast.error("Título e Responsável são obrigatórios");
+    if (!form.title.trim()) {
+      toast.error("Título é obrigatório");
       return;
     }
 
     setLoading(true);
-    // Simulating loading
-    setTimeout(() => {
+    try {
+      const member = members.find(m => (m.full_name || m.email) === form.assignee);
+      const created = await createProjectTask({
+        project_id: projectId,
+        title: form.title,
+        description: form.description || undefined,
+        status: form.status,
+        priority: form.priority,
+        assignee_id: member?.id,
+        due_date: form.dueDate || undefined,
+      });
+
       const newTask: ProjectTask = {
-        id: `t-${Date.now()}`,
+        id: created.id,
         projectId,
         columnId: mockProjectColumns.find(c => c.status === form.status)?.id || "col-1",
         status: form.status,
-        title: form.title,
-        description: form.description,
+        title: created.title,
+        description: created.description ?? '',
         assignee: form.assignee,
-        dueDate: form.dueDate,
+        dueDate: created.due_date ?? '',
         priority: form.priority,
-        checklist: [], // starts empty, can be added later or via AI
+        checklist: [],
         comments: [],
-        activity: [
-          {
-            id: `act-${Date.now()}`,
-            description: `Tarefa criada por ${form.assignee}`,
-            timestamp: new Date().toISOString()
-          }
-        ],
+        activity: [],
         tags: [],
       };
 
-      console.log('[CreateTaskModal] Tarefa criada localmente', newTask);
       onCreate(newTask);
       toast.success("Tarefa criada com sucesso!");
-      setLoading(false);
       onOpenChange(false);
       setForm({ title: "", description: "", status: "backlog", priority: "medium", assignee: "", dueDate: "" });
-    }, 600);
+    } catch (err) {
+      toast.error("Erro ao criar tarefa: " + String(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

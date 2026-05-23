@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { getCurrentUserAgency } from '@/lib/auth';
 
 export interface CreateProjectInput {
   name: string;
@@ -143,6 +144,7 @@ export interface CreateProjectTaskInput {
   column_id?: string;
   title: string;
   description?: string;
+  status?: string;
   priority?: string;
   assignee_id?: string;
   due_date?: string;
@@ -160,7 +162,7 @@ export async function createProjectTask(input: CreateProjectTaskInput) {
     .insert([{
       agency_id: userData!.agency_id,
       ...input,
-      status: input.column_id ? 'active' : 'planning' // fallback
+      status: input.status ?? (input.column_id ? 'active' : 'backlog'),
     }])
     .select()
     .single();
@@ -220,4 +222,36 @@ export async function createProjectFromTemplate(input: CreateProjectFromTemplate
   console.log('[ProjectsService] createProjectFromTemplate NOT IMPLEMENTED ON FRONTEND. Should be run on Edge Function.');
   // Return dummy to avoid breaking UI if called directly.
   return null;
+}
+
+export async function createProjectSpace(name: string, color?: string) {
+  const { agencyId } = await getCurrentUserAgency();
+  const { data, error } = await supabase
+    .from('project_spaces')
+    .insert([{ agency_id: agencyId, name, color: color ?? 'bg-blue-500' }])
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteProjectSpace(id: string) {
+  const { error } = await supabase.from('project_spaces').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteProject(id: string) {
+  const { error } = await supabase.from('projects').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function updateProjectSpace(id: string, name: string) {
+  const { data, error } = await supabase
+    .from('project_spaces')
+    .update({ name })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
 }

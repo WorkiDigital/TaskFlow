@@ -1,14 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { KanbanBoard } from "@/components/projects/KanbanBoard";
-import { 
-  ProjectTask, 
-  Project, 
-  Space, 
-  ProjectDoc, 
-  ProjectFile, 
-  ProjectActivity, 
-  TaskStatus 
+import {
+  ProjectTask,
+  Project,
+  Space,
+  ProjectDoc,
+  ProjectFile,
+  ProjectActivity,
+  TaskStatus,
+  TaskPriority,
+  ProjectStatus,
+  mockProjectColumns,
 } from "@/data/mockProjects";
 import { ProjectSidebar } from "@/components/projects/ProjectSidebar";
 import { ProjectViewTabs, ProjectViewType } from "@/components/projects/ProjectViewTabs";
@@ -26,6 +29,61 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PromptDialog, ConfirmDialog } from "@/components/projects/CustomDialog";
 import { teamService, TeamMember } from "@/services/teamService";
+import {
+  getProjectSpaces,
+  getProjects,
+  createProject,
+  updateProject,
+  createProjectSpace,
+  deleteProjectSpace,
+  deleteProject as deleteProjectDb,
+  updateProjectSpace,
+  updateProjectTask,
+} from "@/services/projectsService";
+
+// ── DB → local type mappers ────────────────────────────────────────────────
+function mapDbToSpace(row: any): Space {
+  return { id: row.id, name: row.name, color: row.color ?? 'bg-blue-500' };
+}
+
+function mapDbToProject(row: any): Project {
+  return {
+    id: row.id,
+    spaceId: row.space_id ?? '',
+    name: row.name,
+    clientName: row.description ?? '',
+    status: (row.status ?? 'planning') as ProjectStatus,
+    progress: 0,
+    startDate: row.created_at?.split('T')[0] ?? '',
+    dueDate: '',
+    members: [],
+    templateOrigin: row.template_id ? 'Template' : undefined,
+  };
+}
+
+function mapDbToTask(row: any, membersList: TeamMember[]): ProjectTask {
+  const member = membersList.find(m => m.id === row.assignee_id);
+  const taskStatus = (row.status ?? 'backlog') as TaskStatus;
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    columnId: mockProjectColumns.find(c => c.status === taskStatus)?.id ?? 'col-1',
+    status: taskStatus,
+    title: row.title,
+    description: row.description ?? '',
+    assignee: member?.full_name ?? member?.email ?? '',
+    dueDate: row.due_date ?? '',
+    priority: (row.priority ?? 'medium') as TaskPriority,
+    checklist: (row.project_task_checklists ?? []).map((c: any) => ({
+      id: c.id,
+      title: c.title,
+      done: c.is_done ?? false,
+    })),
+    comments: [],
+    activity: [],
+    tags: [],
+  };
+}
 
 export const Route = createFileRoute("/_app/projects")({
   component: ProjectsWorkspace,
@@ -40,42 +98,10 @@ function ProjectsWorkspace() {
       .catch(err => console.error("[Projects] Erro ao carregar membros:", err));
   }, []);
 
-  const [spacesList, setSpacesList] = useState<Space[]>(() => {
-    try {
-      const saved = localStorage.getItem("taskflow_spaces");
-      if (saved) {
-        return JSON.parse(saved);
-      }
-      
-      const defaultSpaces: Space[] = [];
-      localStorage.setItem("taskflow_spaces", JSON.stringify(defaultSpaces));
-      return defaultSpaces;
-    } catch (e) {
-      return [];
-    }
-  });
-
-  const [projectsList, setProjectsList] = useState<Project[]>(() => {
-    try {
-      const saved = localStorage.getItem("taskflow_projects");
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(() => {
-    try {
-      const saved = localStorage.getItem("taskflow_active_project_id");
-      if (saved) return saved;
-      const savedProjects = localStorage.getItem("taskflow_projects");
-      if (savedProjects) {
-        const parsed = JSON.parse(savedProjects);
-        return parsed[0]?.id || null;
-      }
-    } catch (e) {}
-    return null;
-  });
+  const [spacesList, setSpacesList] = useState<Space[]>([]);
+  const [projectsList, setProjectsList] = useState<Project[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [loadingData, setLoadingData] = useState(true);
 
   const [activeView, setActiveView] = useState<ProjectViewType>('board');
   const [searchQuery, setSearchQuery] = useState("");
@@ -85,14 +111,7 @@ function ProjectsWorkspace() {
   const [assigneeFilter, setAssigneeFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"title" | "dueDate" | "priority" | "none">("none");
 
-  const [allTasks, setAllTasks] = useState<ProjectTask[]>(() => {
-    try {
-      const saved = localStorage.getItem("taskflow_tasks");
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
+  const [allTasks, setAllTasks] = useState<ProjectTask[]>([]);
 
   const [selectedTask, setSelectedTask] = useState<ProjectTask | null>(null);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
@@ -103,33 +122,10 @@ function ProjectsWorkspace() {
   const [createTaskDefaultStatus, setCreateTaskDefaultStatus] = useState<TaskStatus>("backlog");
   const [createTaskDefaultDueDate, setCreateTaskDefaultDueDate] = useState<string>("");
 
-  // Docs, Files, and Activities states
-  const [docsList, setDocsList] = useState<ProjectDoc[]>(() => {
-    try {
-      const saved = localStorage.getItem("taskflow_docs");
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-
-  const [filesList, setFilesList] = useState<ProjectFile[]>(() => {
-    try {
-      const saved = localStorage.getItem("taskflow_files");
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-
-  const [activitiesList, setActivitiesList] = useState<ProjectActivity[]>(() => {
-    try {
-      const saved = localStorage.getItem("taskflow_activities");
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
+  // Docs, Files, and Activities states (local only until migration is deployed)
+  const [docsList, setDocsList] = useState<ProjectDoc[]>([]);
+  const [filesList, setFilesList] = useState<ProjectFile[]>([]);
+  const [activitiesList, setActivitiesList] = useState<ProjectActivity[]>([]);
 
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
 
@@ -154,38 +150,29 @@ function ProjectsWorkspace() {
     isDestructive?: boolean;
   }>({ title: "", description: "", onConfirm: () => {} });
 
-  // Synchronizers to localStorage
+  // Load data from Supabase
   useEffect(() => {
-    localStorage.setItem("taskflow_spaces", JSON.stringify(spacesList));
-  }, [spacesList]);
-
-  useEffect(() => {
-    localStorage.setItem("taskflow_projects", JSON.stringify(projectsList));
-  }, [projectsList]);
-
-  useEffect(() => {
-    if (activeProjectId) {
-      localStorage.setItem("taskflow_active_project_id", activeProjectId);
-    } else {
-      localStorage.removeItem("taskflow_active_project_id");
-    }
-  }, [activeProjectId]);
-
-  useEffect(() => {
-    localStorage.setItem("taskflow_tasks", JSON.stringify(allTasks));
-  }, [allTasks]);
-
-  useEffect(() => {
-    localStorage.setItem("taskflow_docs", JSON.stringify(docsList));
-  }, [docsList]);
-
-  useEffect(() => {
-    localStorage.setItem("taskflow_files", JSON.stringify(filesList));
-  }, [filesList]);
-
-  useEffect(() => {
-    localStorage.setItem("taskflow_activities", JSON.stringify(activitiesList));
-  }, [activitiesList]);
+    let cancelled = false;
+    setLoadingData(true);
+    Promise.all([getProjectSpaces(), getProjects()])
+      .then(([spaces, projects]) => {
+        if (cancelled) return;
+        setSpacesList(spaces.map(mapDbToSpace));
+        const mappedProjects = projects.map(mapDbToProject);
+        setProjectsList(mappedProjects);
+        const allDbTasks = projects.flatMap((p: any) =>
+          (p.project_tasks ?? []).map((t: any) => mapDbToTask(t, members))
+        );
+        setAllTasks(allDbTasks);
+        if (!activeProjectId && mappedProjects.length > 0) {
+          setActiveProjectId(mappedProjects[0].id);
+        }
+      })
+      .catch(e => console.error('[Projects] Erro ao carregar dados:', e))
+      .finally(() => { if (!cancelled) setLoadingData(false); });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [members]);
 
   const activeProject = projectsList.find(p => p.id === activeProjectId);
   
@@ -224,7 +211,13 @@ function ProjectsWorkspace() {
       const updated = [...prev];
       newTasks.forEach(nt => {
         const idx = updated.findIndex(t => t.id === nt.id);
-        if (idx !== -1) updated[idx] = nt;
+        if (idx !== -1) {
+          if (updated[idx].status !== nt.status) {
+            updateProjectTask(nt.id, { status: nt.status })
+              .catch(e => console.error('[Projects] Erro ao mover tarefa:', e));
+          }
+          updated[idx] = nt;
+        }
       });
       return updated;
     });
@@ -235,7 +228,17 @@ function ProjectsWorkspace() {
     setDrawerOpen(true);
   };
 
-  const handleUpdateTask = (updatedTask: ProjectTask) => {
+  const handleUpdateTask = async (updatedTask: ProjectTask) => {
+    const memberByName = members.find(m => (m.full_name || m.email) === updatedTask.assignee);
+    updateProjectTask(updatedTask.id, {
+      title: updatedTask.title,
+      description: updatedTask.description || undefined,
+      status: updatedTask.status,
+      priority: updatedTask.priority,
+      due_date: updatedTask.dueDate || undefined,
+      assignee_id: memberByName?.id,
+    }).catch(e => console.error('[Projects] Erro ao salvar tarefa:', e));
+
     const oldTask = allTasks.find(t => t.id === updatedTask.id);
     setAllTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
     
@@ -304,66 +307,78 @@ function ProjectsWorkspace() {
     }
   };
 
-  const handleDeleteProject = (projectId: string) => {
-    const updated = projectsList.filter(p => p.id !== projectId);
-    setProjectsList(updated);
-    if (activeProjectId === projectId) {
-      setActiveProjectId(updated[0]?.id || null);
+  const handleDeleteProject = async (projectId: string) => {
+    try {
+      await deleteProjectDb(projectId);
+      const updated = projectsList.filter(p => p.id !== projectId);
+      setProjectsList(updated);
+      setAllTasks(prev => prev.filter(t => t.projectId !== projectId));
+      if (activeProjectId === projectId) setActiveProjectId(updated[0]?.id || null);
+      toast.success("Lista excluída.");
+    } catch (e) {
+      toast.error("Erro ao excluir lista: " + String(e));
     }
-    toast.success("Lista excluída.");
   };
 
-  const handleEditProject = (projectId: string, newName: string) => {
-    setProjectsList(prev => prev.map(p => p.id === projectId ? { ...p, name: newName } : p));
-    toast.success("Nome da lista atualizado.");
+  const handleEditProject = async (projectId: string, newName: string) => {
+    try {
+      await updateProject(projectId, { name: newName });
+      setProjectsList(prev => prev.map(p => p.id === projectId ? { ...p, name: newName } : p));
+      toast.success("Nome da lista atualizado.");
+    } catch (e) {
+      toast.error("Erro ao atualizar lista: " + String(e));
+    }
   };
 
-  const handleAddProject = (spaceId: string, name: string) => {
-    const newProjectId = `p-${Date.now()}`;
-    const newProject: Project = {
-      id: newProjectId,
-      spaceId,
-      name,
-      clientName: "Cliente Interno",
-      status: "planning",
-      progress: 0,
-      startDate: new Date().toISOString().split('T')[0],
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      members: ["MC"]
-    };
-    setProjectsList(prev => [...prev, newProject]);
-    setActiveProjectId(newProjectId);
-    toast.success(`Lista "${name}" criada!`);
+  const handleAddProject = async (spaceId: string, name: string) => {
+    try {
+      const created = await createProject({ space_id: spaceId, name });
+      const newProject = mapDbToProject(created);
+      setProjectsList(prev => [...prev, newProject]);
+      setActiveProjectId(newProject.id);
+      toast.success(`Lista "${name}" criada!`);
+    } catch (e) {
+      toast.error("Erro ao criar lista: " + String(e));
+    }
   };
 
-  const handleDeleteSpace = (spaceId: string) => {
-    setSpacesList(prev => prev.filter(s => s.id !== spaceId));
-    // Also delete projects belonging to that space
-    setProjectsList(prev => {
-      const remainingProjects = prev.filter(p => p.spaceId !== spaceId);
-      if (activeProjectId && prev.find(p => p.id === activeProjectId)?.spaceId === spaceId) {
-        setActiveProjectId(remainingProjects[0]?.id || null);
-      }
-      return remainingProjects;
-    });
-    toast.success("Pasta excluída.");
+  const handleDeleteSpace = async (spaceId: string) => {
+    try {
+      await deleteProjectSpace(spaceId);
+      setSpacesList(prev => prev.filter(s => s.id !== spaceId));
+      setProjectsList(prev => {
+        const remaining = prev.filter(p => p.spaceId !== spaceId);
+        if (activeProjectId && prev.find(p => p.id === activeProjectId)?.spaceId === spaceId) {
+          setActiveProjectId(remaining[0]?.id || null);
+        }
+        return remaining;
+      });
+      toast.success("Pasta excluída.");
+    } catch (e) {
+      toast.error("Erro ao excluir pasta: " + String(e));
+    }
   };
 
-  const handleEditSpace = (spaceId: string, newName: string) => {
-    setSpacesList(prev => prev.map(s => s.id === spaceId ? { ...s, name: newName } : s));
-    toast.success("Nome da pasta atualizado.");
+  const handleEditSpace = async (spaceId: string, newName: string) => {
+    try {
+      await updateProjectSpace(spaceId, newName);
+      setSpacesList(prev => prev.map(s => s.id === spaceId ? { ...s, name: newName } : s));
+      toast.success("Nome da pasta atualizado.");
+    } catch (e) {
+      toast.error("Erro ao atualizar pasta: " + String(e));
+    }
   };
 
-  const handleAddSpace = (name: string) => {
+  const handleAddSpace = async (name: string) => {
     const colors = ['bg-pink-500', 'bg-blue-500', 'bg-purple-500', 'bg-orange-500', 'bg-emerald-500', 'bg-red-500', 'bg-yellow-500', 'bg-cyan-500'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    const newSpace: Space = {
-      id: `sp-${Date.now()}`,
-      name,
-      color: randomColor
-    };
-    setSpacesList(prev => [...prev, newSpace]);
-    toast.success(`Pasta "${name}" criada!`);
+    try {
+      const created = await createProjectSpace(name, randomColor);
+      setSpacesList(prev => [...prev, mapDbToSpace(created)]);
+      toast.success(`Pasta "${name}" criada!`);
+    } catch (e) {
+      toast.error("Erro ao criar pasta: " + String(e));
+    }
   };
 
   // Open task creator modal (global trigger)

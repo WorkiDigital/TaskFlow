@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/services/supabase";
 import { onboardingService } from "@/services/onboardingService";
+import { getCurrentUserAgency } from "@/lib/auth";
 
 interface ClientFormDialogProps {
   open: boolean;
@@ -39,12 +40,16 @@ export function ClientFormDialog({ open, onOpenChange, onCreate }: ClientFormDia
 
     setLoading(true);
 
+    let agencyId: string | undefined;
+    try { agencyId = (await getCurrentUserAgency()).agencyId; } catch (_) {}
+
     const { data: createdClient, error } = await supabase.from("clients").insert([
       {
         name: form.name,
         email: form.email,
         phone,
         address: form.company,
+        ...(agencyId ? { agency_id: agencyId } : {}),
       },
     ]).select("id").single();
 

@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { AutomationFlow } from '../data/mockAutomations';
+import { getCurrentUserAgency } from '@/lib/auth';
 
 export const automationsService = {
   async getFlows() {
@@ -38,10 +39,14 @@ export const automationsService = {
 
   async saveFlow(flow: AutomationFlow) {
     // 1. Upsert Flow
+    let agencyId: string | undefined;
+    try { agencyId = (await getCurrentUserAgency()).agencyId; } catch (_) {}
+
     const { data: flowData, error: flowError } = await supabase
       .from('automation_flows')
       .upsert({
-        id: flow.id.startsWith('mock') ? undefined : flow.id, // if it's a mock, let DB generate UUID
+        id: flow.id.startsWith('mock') ? undefined : flow.id,
+        ...(agencyId ? { agency_id: agencyId } : {}),
         name: flow.name,
         description: flow.description,
         mode: flow.mode,
