@@ -1,8 +1,43 @@
-import { Outlet } from "@tanstack/react-router";
+import { Outlet, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { authService } from "@/services/authService";
 
 export function AppLayout() {
+  const navigate = useNavigate();
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    authService.getSession()
+      .then(session => {
+        if (!mounted) return;
+        if (!session) {
+          void navigate({ to: "/login", replace: true });
+          return;
+        }
+        setChecking(false);
+      })
+      .catch(() => {
+        if (mounted) void navigate({ to: "/login", replace: true });
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [navigate]);
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen w-full">
       <div className="hidden lg:block lg:w-64 lg:shrink-0">
