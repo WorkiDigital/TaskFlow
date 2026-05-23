@@ -1,5 +1,5 @@
 import { useRouterState } from "@tanstack/react-router";
-import { Bell, LogOut, Menu } from "lucide-react";
+import { Bell, Bot, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -16,18 +16,38 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { authService } from "@/services/authService";
 import { supabase } from "@/services/supabase";
+import { OperationalAgentPanel } from "@/components/agent/OperationalAgentPanel";
+import { agentService, type AgentContext } from "@/services/agentService";
+
+function pathToAgentContext(path: string): AgentContext {
+  if (path.startsWith("/projects")) return "projects";
+  if (path.startsWith("/templates")) return "templates";
+  if (path.startsWith("/automations")) return "automations";
+  if (path.startsWith("/contracts")) return "contracts";
+  if (path.startsWith("/onboarding")) return "onboarding";
+  return "dashboard";
+}
 
 export function Header() {
   const currentPath = useRouterState({ select: (s) => s.location.pathname });
   const current = navItems.find((i) => currentPath.startsWith(i.to)) ?? navItems[0];
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
+  const [agentOpen, setAgentOpen] = useState(false);
+  const [hasActiveInsights, setHasActiveInsights] = useState(false);
+  const agentContext = pathToAgentContext(currentPath);
 
   useEffect(() => {
     void supabase.auth.getUser().then(({ data }) => {
       setEmail(data.user?.email ?? "");
     });
   }, []);
+
+  useEffect(() => {
+    agentService.getInsights(agentContext).then((data) => {
+      setHasActiveInsights(data.length > 0);
+    }).catch(() => {});
+  }, [agentContext]);
 
   const handleSignOut = async () => {
     try {
@@ -40,6 +60,7 @@ export function Header() {
   };
 
   return (
+    <>
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/60 px-4 backdrop-blur-xl md:px-6">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
@@ -57,6 +78,19 @@ export function Header() {
         <h1 className="truncate text-base font-semibold leading-tight md:text-lg">{current.label}</h1>
         <p className="truncate text-xs text-muted-foreground">{current.subtitle}</p>
       </div>
+
+      <Button
+        variant="ghost"
+        size="icon"
+        className="relative"
+        aria-label="Agente Operacional"
+        onClick={() => setAgentOpen(true)}
+      >
+        <Bot className="h-5 w-5" />
+        {hasActiveInsights && (
+          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accent" />
+        )}
+      </Button>
 
       <Button
         variant="ghost"
@@ -94,5 +128,12 @@ export function Header() {
         </DropdownMenuContent>
       </DropdownMenu>
     </header>
+
+    <OperationalAgentPanel
+      open={agentOpen}
+      onOpenChange={setAgentOpen}
+      context={agentContext}
+    />
+    </>
   );
 }

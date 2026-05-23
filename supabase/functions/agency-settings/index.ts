@@ -12,6 +12,9 @@ type AgencySettings = {
   evolution_api_url: string | null;
   evolution_api_key: string | null;
   autentique_token: string | null;
+  ai_provider: string | null;
+  ai_provider_keys: Record<string, string> | null;
+  ai_model: string | null;
 };
 
 function createAdminClient() {
@@ -29,13 +32,20 @@ function toPublicSettings(settings: AgencySettings | null) {
     evolution_api_url: settings?.evolution_api_url ?? undefined,
     is_autentique_configured: Boolean(settings?.autentique_token),
     is_evolution_configured: Boolean(settings?.evolution_api_url && settings?.evolution_api_key),
+    ai_provider: settings?.ai_provider ?? "claude",
+    ai_model: settings?.ai_model ?? null,
+    ai_provider_configured: Boolean(
+      settings?.ai_provider_keys &&
+      settings.ai_provider &&
+      (settings.ai_provider_keys as Record<string, string>)[settings.ai_provider]
+    ),
   };
 }
 
 async function getSettings(supabaseClient: ReturnType<typeof createAdminClient>) {
   const { data, error } = await supabaseClient
     .from("agency_settings")
-    .select("id, name, evolution_api_url, evolution_api_key, autentique_token")
+    .select("id, name, evolution_api_url, evolution_api_key, autentique_token, ai_provider, ai_provider_keys, ai_model")
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle<AgencySettings>();
@@ -54,7 +64,7 @@ async function ensureSettings(supabaseClient: ReturnType<typeof createAdminClien
   const { data, error } = await supabaseClient
     .from("agency_settings")
     .insert({ name: "Agencia Prime" })
-    .select("id, name, evolution_api_url, evolution_api_key, autentique_token")
+    .select("id, name, evolution_api_url, evolution_api_key, autentique_token, ai_provider, ai_provider_keys, ai_model")
     .single<AgencySettings>();
 
   if (error) {
@@ -70,7 +80,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, token, url, apiKey } = await req.json();
+    const { action, token, url, apiKey, provider, model } = await req.json();
     const supabaseClient = createAdminClient();
     const settings = await ensureSettings(supabaseClient);
 
@@ -112,6 +122,48 @@ serve(async (req) => {
       return new Response(JSON.stringify(toPublicSettings(data)), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (action === "update_ai_provider") {
+      const validProviders = ["claude", "gpt", "gemini"];
+      if (!provider || !validProviders.includes(String(provider))) {
+        throw new Error("Provider inválido. Use: claude, gpt ou gemini.");
+      }
+
+      const existingKeys = (settings.ai_provider_keys ?? {}) as Record<string, string>;
+      const updatedKeys = apiKey ? { ...existingKeys, [String(provider)]: String(apiKey) } : existingKeys;
+
+      const { data, error } = await supabaseClient
+        .from("agency_settings")
+        .update({
+          ai_provider: String(provider),
+          ai_provider_keys: updatedKeys,
+          ai_model: model ? String(model) : null,
+        })
+        .eq("id", settings.id)
+        .select("id, name, evolution_api_url, evolution_api_key, autentique_token, ai_provider, ai_provider_keys, ai_model")
+        .single<AgencySettings>();
+
+      if (error) throw error;
+
+      return new Response(JSON.stringify(toPublicSettings(data)), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "get_ai_provider") {
+      return new Response(
+        JSON.stringify({
+          provider: settings.ai_provider ?? "claude",
+          model: settings.ai_model ?? null,
+          isConfigured: Boolean(
+            settings.ai_provider_keys &&
+            settings.ai_provider &&
+            (settings.ai_provider_keys as Record<string, string>)[settings.ai_provider]
+          ),
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     throw new Error("Acao invalida para agency-settings.");

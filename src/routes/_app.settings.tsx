@@ -17,7 +17,8 @@ import { settingsService } from "@/services/settingsService";
 import { teamService, TeamMember } from "@/services/teamService";
 import { InviteMemberModal } from "@/components/team/InviteMemberModal";
 import { AgencyRolesModal } from "@/components/team/AgencyRolesModal";
-import { Loader2, Plus, Settings2 } from "lucide-react";
+import { Loader2, Plus, Settings2, Copy, Trash2, ShieldAlert, ShieldCheck, Mail, UserMinus, UserCheck, Briefcase, Users, Bot, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { agentService, AI_MODELS, type AgentProvider } from "@/services/agentService";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
@@ -36,9 +37,18 @@ function SettingsPage() {
   const [isLoadingMembers, setIsLoadingMembers] = useState(true);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isRolesModalOpen, setIsRolesModalOpen] = useState(false);
+  const [pendingInvites, setPendingInvites] = useState<any[]>([]);
+  const [isLoadingInvites, setIsLoadingInvites] = useState(true);
 
   // Integrações
   const [editingIntegration, setEditingIntegration] = useState<'autentique' | null>(null);
+
+  // Agente de IA
+  const [aiProvider, setAiProvider] = useState<AgentProvider>('claude');
+  const [aiModel, setAiModel] = useState<string>('');
+  const [aiApiKey, setAiApiKey] = useState('');
+  const [showAiKey, setShowAiKey] = useState(false);
+  const [isSavingAi, setIsSavingAi] = useState(false);
   
   const [autentiqueConfig, setAutentiqueConfig] = useState({
     token: '',
@@ -51,6 +61,50 @@ function SettingsPage() {
       .then(setMembers)
       .catch((error) => console.error("[Settings] Erro ao carregar membros:", error))
       .finally(() => setIsLoadingMembers(false));
+
+    setIsLoadingInvites(true);
+    teamService.getPendingInvites()
+      .then(setPendingInvites)
+      .catch((error) => console.error("[Settings] Erro ao carregar convites:", error))
+      .finally(() => setIsLoadingInvites(false));
+  };
+
+  const handleToggleStatus = async (member: TeamMember) => {
+    const nextStatus = member.status === 'suspended' ? 'active' : 'suspended';
+    try {
+      await teamService.updateMemberStatus(member.id, nextStatus);
+      toast.success(`Membro ${nextStatus === 'suspended' ? 'suspenso' : 'reativado'} com sucesso!`);
+      loadMembers();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao atualizar status do membro.");
+    }
+  };
+
+  const handleCancelInvite = async (inviteId: string) => {
+    if (!confirm("Deseja mesmo cancelar este convite?")) return;
+    try {
+      await teamService.cancelInvite(inviteId);
+      toast.success("Convite cancelado.");
+      loadMembers();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao cancelar convite.");
+    }
+  };
+
+  const handleCopyInviteLink = (token: string) => {
+    const link = `${window.location.origin}/invite/${token}`;
+    navigator.clipboard.writeText(link);
+    toast.success("Link do convite copiado!");
+  };
+
+  const handleRoleChange = async (userId: string, newRole: any) => {
+    try {
+      await teamService.updateMemberRole(userId, newRole);
+      toast.success("Nível de acesso atualizado.");
+      loadMembers();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao alterar nível de acesso.");
+    }
   };
 
   useEffect(() => {
@@ -63,8 +117,28 @@ function SettingsPage() {
         toast.error("Nao foi possivel carregar as integracoes.");
       });
 
+    agentService.getProviderConfig()
+      .then((config) => {
+        setAiProvider(config.provider);
+        setAiModel(config.model ?? '');
+      })
+      .catch(() => {});
+
     loadMembers();
   }, []);
+
+  const saveAiProviderConfig = async () => {
+    setIsSavingAi(true);
+    try {
+      await agentService.updateProviderConfig(aiProvider, aiApiKey || undefined, aiModel || undefined);
+      setAiApiKey('');
+      toast.success(`Configuração salva — ${aiProvider.toUpperCase()} ${aiModel ? `(${aiModel})` : ''}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao salvar configuração de IA.');
+    } finally {
+      setIsSavingAi(false);
+    }
+  };
 
 
   const saveAutentiqueConfig = async () => {
@@ -88,11 +162,15 @@ function SettingsPage() {
       </div>
 
       <Tabs defaultValue="agency" className="space-y-6">
-        <TabsList className="glass-panel">
+        <TabsList className="glass-panel flex-wrap h-auto gap-1">
           <TabsTrigger value="agency">Agência</TabsTrigger>
           <TabsTrigger value="team">Equipe</TabsTrigger>
           <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
           <TabsTrigger value="integrations">Integrações</TabsTrigger>
+          <TabsTrigger value="agent" className="gap-1.5">
+            <Bot className="h-3.5 w-3.5" />
+            Agente de IA
+          </TabsTrigger>
           <TabsTrigger value="preferences">Preferências</TabsTrigger>
         </TabsList>
 
@@ -132,51 +210,166 @@ function SettingsPage() {
           </GlassCard>
         </TabsContent>
 
-        <TabsContent value="team" className="space-y-4">
+        <TabsContent value="team" className="space-y-6">
           <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium text-foreground">Equipe da Agência</h3>
+              <p className="text-xs text-muted-foreground">Gerencie membros, cargos e acessos do workspace.</p>
+            </div>
             <div className="flex gap-2">
-              <Button onClick={() => setIsInviteModalOpen(true)} className="gap-2">
+              <Button onClick={() => setIsInviteModalOpen(true)} className="gap-2 text-xs h-9">
                 <Plus className="h-4 w-4" /> Convidar Membro
               </Button>
-              <Button variant="outline" onClick={() => setIsRolesModalOpen(true)} className="gap-2">
+              <Button variant="outline" onClick={() => setIsRolesModalOpen(true)} className="gap-2 text-xs h-9">
                 <Settings2 className="h-4 w-4" /> Gerenciar Cargos
               </Button>
             </div>
           </div>
 
-          <div className="space-y-3">
-            {isLoadingMembers ? (
-              <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-            ) : members.length === 0 ? (
-              <GlassCard className="p-8 text-center text-muted-foreground">Nenhum membro encontrado.</GlassCard>
-            ) : (
-              members.map((m) => (
-                <GlassCard key={m.id} className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground">
-                        {m.full_name?.substring(0, 2).toUpperCase() || m.email?.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-medium">{m.full_name || m.email}</p>
-                      <p className="text-xs text-muted-foreground flex gap-2">
-                        <span>{m.role === 'admin' ? 'Administrador' : 'Membro'}</span>
-                        {m.agency_role && (
-                          <>
-                            <span>&bull;</span>
-                            <span className="font-medium text-foreground">{m.agency_role.name}</span>
-                          </>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <StatusBadge tone="success">Ativo</StatusBadge>
-                  </div>
-                </GlassCard>
-              ))
-            )}
+          <div className="grid grid-cols-1 gap-6">
+            {/* Membros Ativos */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                <Users className="h-4 w-4 text-primary" />
+                Membros da Agência ({members.length})
+              </h4>
+              <div className="space-y-3">
+                {isLoadingMembers ? (
+                  <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                ) : members.length === 0 ? (
+                  <GlassCard className="p-8 text-center text-muted-foreground text-sm">Nenhum membro encontrado.</GlassCard>
+                ) : (
+                  members.map((m) => {
+                    const isSuspended = m.status === 'suspended';
+                    return (
+                      <GlassCard key={m.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-4 border transition-all ${isSuspended ? 'opacity-65 border-destructive/20 bg-destructive/5' : 'hover:border-border/80'}`}>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 shrink-0">
+                            <AvatarFallback className={`bg-gradient-to-br text-primary-foreground text-xs font-semibold ${isSuspended ? 'from-muted to-muted-foreground' : 'from-primary to-accent'}`}>
+                              {m.full_name?.substring(0, 2).toUpperCase() || m.email?.substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-sm font-medium">{m.full_name || m.email}</p>
+                              {m.department && (
+                                <span className="inline-flex items-center text-[10px] bg-secondary/60 text-secondary-foreground px-2 py-0.5 rounded-full font-medium">
+                                  {m.department}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
+                              <span>{m.email}</span>
+                              <span>&bull;</span>
+                              <span className="font-semibold text-foreground">{m.job_title || 'Membro'}</span>
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between sm:justify-end gap-3 self-stretch sm:self-auto border-t sm:border-0 pt-2 sm:pt-0">
+                          {/* Nivel de acesso */}
+                          <div className="flex items-center gap-1.5">
+                            <select
+                              value={m.role}
+                              onChange={(e) => handleRoleChange(m.id, e.target.value)}
+                              disabled={m.role === 'owner'} // owner can't change their own role here
+                              className="rounded-lg border border-border bg-background/50 px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary h-8"
+                            >
+                              <option value="owner">Dono (Owner)</option>
+                              <option value="admin">Admin</option>
+                              <option value="manager">Manager</option>
+                              <option value="team">Team (Membro)</option>
+                              <option value="client">Client (Cliente)</option>
+                            </select>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <StatusBadge tone={isSuspended ? "danger" : "success"}>
+                              {isSuspended ? "Suspenso" : "Ativo"}
+                            </StatusBadge>
+
+                            {m.role !== 'owner' && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className={`h-8 w-8 ${isSuspended ? 'text-success hover:bg-success/10' : 'text-destructive hover:bg-destructive/10'}`}
+                                onClick={() => handleToggleStatus(m)}
+                                title={isSuspended ? "Reativar Membro" : "Suspender Membro"}
+                              >
+                                {isSuspended ? <UserCheck className="h-4 w-4" /> : <UserMinus className="h-4 w-4" />}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </GlassCard>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Convites Pendentes */}
+            <div className="space-y-3 border-t border-border/30 pt-6">
+              <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                <Mail className="h-4 w-4 text-amber-500" />
+                Convites Pendentes ({pendingInvites.length})
+              </h4>
+              <div className="space-y-3">
+                {isLoadingInvites ? (
+                  <div className="flex justify-center p-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                ) : pendingInvites.length === 0 ? (
+                  <GlassCard className="p-6 text-center text-muted-foreground text-xs italic bg-secondary/5">Nenhum convite pendente.</GlassCard>
+                ) : (
+                  pendingInvites.map((invite) => (
+                    <GlassCard key={invite.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-4 hover:border-border/60">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium">{invite.email}</p>
+                          <span className="inline-flex items-center text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full font-medium">
+                            Pendente
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground flex items-center gap-2">
+                          <span>Acesso: {invite.role}</span>
+                          {invite.job_title && (
+                            <>
+                              <span>&bull;</span>
+                              <span>Função: {invite.job_title}</span>
+                            </>
+                          )}
+                          {invite.department && (
+                            <>
+                              <span>&bull;</span>
+                              <span>Depto: {invite.department}</span>
+                            </>
+                          )}
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 justify-end">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 text-xs gap-1"
+                          onClick={() => handleCopyInviteLink(invite.token)}
+                        >
+                          <Copy className="h-3 w-3" /> Copiar Link
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                          onClick={() => handleCancelInvite(invite.id)}
+                          title="Cancelar Convite"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </GlassCard>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </TabsContent>
 
@@ -215,6 +408,128 @@ function SettingsPage() {
               <p className="mt-1 text-xs text-muted-foreground">Assistente para briefings e propostas</p>
             </div>
             <StatusBadge tone="neutral">Em breve</StatusBadge>
+          </GlassCard>
+        </TabsContent>
+
+        {/* ── Agente de IA ── */}
+        <TabsContent value="agent" className="space-y-4">
+          <GlassCard className="space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 border border-primary/30">
+                <Bot className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium">Agente Operacional</p>
+                <p className="text-xs text-muted-foreground">Configure o provider de IA usado para análises e sugestões</p>
+              </div>
+            </div>
+
+            {/* Provider Selection */}
+            <div className="space-y-3">
+              <p className="text-sm font-medium">Provider de IA</p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {(
+                  [
+                    { value: 'claude', label: 'Claude', sublabel: 'Anthropic · claude-sonnet-4-5', icon: '✦' },
+                    { value: 'gpt', label: 'GPT-4o', sublabel: 'OpenAI · gpt-4o', icon: '⬡' },
+                    { value: 'gemini', label: 'Gemini', sublabel: 'Google · gemini-1.5-pro', icon: '◈' },
+                  ] as Array<{ value: AgentProvider; label: string; sublabel: string; icon: string }>
+                ).map((p) => (
+                  <button
+                    key={p.value}
+                    onClick={() => { setAiProvider(p.value); setAiModel(''); }}
+                    className={`flex items-start gap-3 rounded-xl border p-3 text-left transition-all ${
+                      aiProvider === p.value
+                        ? 'border-primary/60 bg-primary/10'
+                        : 'border-white/10 bg-white/5 hover:border-white/20'
+                    }`}
+                  >
+                    <span className="text-lg leading-none mt-0.5">{p.icon}</span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-medium">{p.label}</p>
+                        {aiProvider === p.value && (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">{p.sublabel}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Model Selection */}
+            <div className="space-y-2">
+              <Label>Modelo</Label>
+              <div className={`grid grid-cols-1 gap-2 ${AI_MODELS[aiProvider].length > 3 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
+                {AI_MODELS[aiProvider].map((m) => {
+                  const isSelected = aiModel ? aiModel === m.id : !!m.isDefault;
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => setAiModel(m.id)}
+                      className={`flex flex-col gap-0.5 rounded-xl border p-3 text-left transition-all ${
+                        isSelected
+                          ? 'border-primary/60 bg-primary/10'
+                          : 'border-white/10 bg-white/5 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-medium">{m.label}</p>
+                        {isSelected && <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />}
+                        {m.isDefault && !isSelected && (
+                          <span className="text-[10px] text-muted-foreground border border-white/10 rounded px-1">padrão</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-snug">{m.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* API Key */}
+            <div className="space-y-2">
+              <Label htmlFor="ai-key">
+                API Key ({aiProvider === 'claude' ? 'Anthropic' : aiProvider === 'gpt' ? 'OpenAI' : 'Google AI'})
+              </Label>
+              <div className="relative">
+                <Input
+                  id="ai-key"
+                  type={showAiKey ? 'text' : 'password'}
+                  placeholder={
+                    aiProvider === 'claude' ? 'sk-ant-...' :
+                    aiProvider === 'gpt' ? 'sk-...' :
+                    'AI...'
+                  }
+                  value={aiApiKey}
+                  onChange={(e) => setAiApiKey(e.target.value)}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setShowAiKey(!showAiKey)}
+                >
+                  {showAiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Deixe em branco para usar a chave global da plataforma. A chave fica armazenada com segurança e nunca é exibida novamente.
+              </p>
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                onClick={saveAiProviderConfig}
+                disabled={isSavingAi}
+                className="gap-2"
+              >
+                {isSavingAi ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Salvar configuração
+              </Button>
+            </div>
           </GlassCard>
         </TabsContent>
 

@@ -132,6 +132,72 @@ serve(async (req) => {
         // Create Tasks
         if (template.template_tasks?.length > 0) {
           for (const task of template.template_tasks) {
+            // Resolve assignee based on assignee_rule
+            let assigneeId: string | null = null;
+            const assigneeRule = task.assignee_rule;
+            if (assigneeRule && typeof assigneeRule === 'object') {
+              const ruleType = assigneeRule.type;
+              const ruleValue = assigneeRule.value;
+              
+              if (ruleType === 'specific_user') {
+                assigneeId = ruleValue || null;
+              } else if (ruleType === 'role' && ruleValue) {
+                // Find agency role with matching name
+                const { data: roleData } = await supabase
+                  .from('agency_roles')
+                  .select('id')
+                  .eq('agency_id', agencyId)
+                  .eq('name', ruleValue)
+                  .maybeSingle();
+                  
+                if (roleData) {
+                  // Find first active user with this role
+                  const { data: memberData } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('agency_id', agencyId)
+                    .eq('agency_role_id', roleData.id)
+                    .eq('status', 'active')
+                    .limit(1)
+                    .maybeSingle();
+                    
+                  if (memberData) {
+                    assigneeId = memberData.id;
+                  }
+                }
+              } else if (ruleType === 'project_manager') {
+                // Find first active manager or admin/owner
+                const { data: managerData } = await supabase
+                  .from('users')
+                  .select('id')
+                  .eq('agency_id', agencyId)
+                  .eq('status', 'active')
+                  .eq('role', 'manager')
+                  .limit(1)
+                  .maybeSingle();
+                
+                if (managerData) {
+                  assigneeId = managerData.id;
+                }
+              }
+
+              // Fallback if assignee is still null and we want manager/owner
+              if (!assigneeId && assigneeRule.fallback !== 'unassigned') {
+                const { data: fallbackUser } = await supabase
+                  .from('users')
+                  .select('id')
+                  .eq('agency_id', agencyId)
+                  .eq('status', 'active')
+                  .in('role', ['owner', 'admin'])
+                  .limit(1)
+                  .maybeSingle();
+                  
+                if (fallbackUser) {
+                  assigneeId = fallbackUser.id;
+                }
+              }
+            }
+
             const { data: newTask } = await supabase
               .from('project_tasks')
               .insert([{
@@ -141,6 +207,7 @@ serve(async (req) => {
                 title: task.title,
                 description: task.description,
                 priority: task.priority,
+                assignee_id: assigneeId,
                 source: 'template',
                 template_task_id: task.id
               }])

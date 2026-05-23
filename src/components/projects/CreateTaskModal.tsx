@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { TeamMember } from "@/services/teamService";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface CreateTaskModalProps {
@@ -21,9 +22,10 @@ interface CreateTaskModalProps {
   onCreate: (task: ProjectTask) => void;
   defaultStatus?: TaskStatus;
   defaultDueDate?: string;
+  members: TeamMember[];
 }
 
-export function CreateTaskModal({ open, onOpenChange, projectId, onCreate, defaultStatus, defaultDueDate }: CreateTaskModalProps) {
+export function CreateTaskModal({ open, onOpenChange, projectId, onCreate, defaultStatus, defaultDueDate, members }: CreateTaskModalProps) {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     title: "",
@@ -153,13 +155,21 @@ export function CreateTaskModal({ open, onOpenChange, projectId, onCreate, defau
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Responsável <span className="text-destructive">*</span></Label>
-              <Input 
-                required
-                value={form.assignee}
-                onChange={e => setForm({...form, assignee: e.target.value})}
-                placeholder="Iniciais (ex: JP)"
-                className="bg-background/50"
-              />
+              <Select value={form.assignee} onValueChange={(v) => setForm({...form, assignee: v})}>
+                <SelectTrigger className="bg-background/50">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent className="glass-card">
+                  {members.map(m => (
+                    <SelectItem key={m.id} value={m.full_name || m.email}>
+                      {m.full_name || m.email}
+                    </SelectItem>
+                  ))}
+                  {members.length === 0 && (
+                    <SelectItem value="Internal" disabled>Sem membros</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Prazo</Label>

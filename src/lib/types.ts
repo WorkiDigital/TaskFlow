@@ -1,5 +1,5 @@
 export type ClientStatus = "active" | "onboarding" | "paused" | "churned";
-export type ContractStatus = "draft" | "pending" | "signed" | "expired";
+export type ContractStatus = "draft" | "pending" | "sent" | "signed" | "expired" | "cancelled" | "error";
 export type ProjectStatus = "backlog" | "in_progress" | "review" | "done";
 export type Priority = "low" | "medium" | "high";
 
@@ -32,11 +32,19 @@ export interface Onboarding {
 export interface Contract {
   id: string;
   title: string;
-  clientName: string;
-  value: number;
+  client_id?: string;
+  client_name?: string;
+  value?: number;
+  content?: string;
   status: ContractStatus;
-  createdAt: string;
-  expiresAt?: string;
+  template_id?: string;
+  signer_name?: string;
+  signer_email?: string;
+  autentique_document_id?: string;
+  signature_url?: string;
+  signed_at?: string;
+  created_at: string;
+  updated_at?: string;
 }
 
 export interface ProjectTask {

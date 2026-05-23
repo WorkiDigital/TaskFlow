@@ -16,6 +16,7 @@ import { ArrowLeft, ArrowRight, Save, Clock, MessageSquare, Paperclip, Send, Act
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TeamMember } from "@/services/teamService";
 
 interface TaskDetailsDrawerProps {
   task: ProjectTask | null;
@@ -23,9 +24,10 @@ interface TaskDetailsDrawerProps {
   onOpenChange: (open: boolean) => void;
   onUpdate: (task: ProjectTask) => void;
   onMove: (task: ProjectTask, direction: "next" | "prev") => void;
+  members: TeamMember[];
 }
 
-export function TaskDetailsDrawer({ task, open, onOpenChange, onUpdate, onMove }: TaskDetailsDrawerProps) {
+export function TaskDetailsDrawer({ task, open, onOpenChange, onUpdate, onMove, members }: TaskDetailsDrawerProps) {
   const [formData, setFormData] = useState<ProjectTask | null>(null);
   const [newComment, setNewComment] = useState("");
   const [newChecklistItem, setNewChecklistItem] = useState("");
@@ -172,10 +174,14 @@ export function TaskDetailsDrawer({ task, open, onOpenChange, onUpdate, onMove }
                     <SelectValue placeholder="Responsável" />
                   </SelectTrigger>
                   <SelectContent className="glass-card">
-                    <SelectItem value="MC">MC (Matheus)</SelectItem>
-                    <SelectItem value="RT">RT (Rodrigo)</SelectItem>
-                    <SelectItem value="PH">PH (Pedro)</SelectItem>
-                    <SelectItem value="JP">JP (João)</SelectItem>
+                    {members.map(m => (
+                      <SelectItem key={m.id} value={m.full_name || m.email}>
+                        {m.full_name || m.email}
+                      </SelectItem>
+                    ))}
+                    {members.length === 0 && (
+                      <SelectItem value="none" disabled>Sem membros</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>

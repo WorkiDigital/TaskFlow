@@ -1,18 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect } from "react";
 import { ContractList } from "@/components/contracts/ContractList";
 import { ContractBuilder } from "@/components/contracts/ContractBuilder";
-import { mockContracts } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/_app/contracts")({
   component: ContractsPage,
 });
 
 function ContractsPage() {
-  useEffect(() => {
-    console.log("[Contracts] página carregada", mockContracts.length);
-  }, []);
-
   return (
     <div className="space-y-6 max-w-7xl mx-auto w-full px-4 py-6 md:px-8 md:py-8">
       <div>
@@ -22,7 +16,7 @@ function ContractsPage() {
 
       <section>
         <h3 className="mb-3 text-sm font-medium text-muted-foreground">Contratos recentes</h3>
-        <ContractList contracts={mockContracts} />
+        <ContractList />
       </section>
 
       <section>

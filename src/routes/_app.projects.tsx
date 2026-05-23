@@ -25,12 +25,21 @@ import { Sparkles, X, Trash2, Plus, Clock, Folder, FolderSync } from "lucide-rea
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PromptDialog, ConfirmDialog } from "@/components/projects/CustomDialog";
+import { teamService, TeamMember } from "@/services/teamService";
 
 export const Route = createFileRoute("/_app/projects")({
   component: ProjectsWorkspace,
 });
 
 function ProjectsWorkspace() {
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  
+  useEffect(() => {
+    teamService.getAgencyMembers()
+      .then(setMembers)
+      .catch(err => console.error("[Projects] Erro ao carregar membros:", err));
+  }, []);
+
   const [spacesList, setSpacesList] = useState<Space[]>(() => {
     try {
       const saved = localStorage.getItem("taskflow_spaces");
@@ -976,6 +985,7 @@ function ProjectsWorkspace() {
           onCreate={handleCreateTask}
           defaultStatus={createTaskDefaultStatus}
           defaultDueDate={createTaskDefaultDueDate}
+          members={members}
         />
       )}
 
@@ -986,6 +996,7 @@ function ProjectsWorkspace() {
         onOpenChange={setDrawerOpen}
         onUpdate={handleUpdateTask}
         onMove={handleMoveTask}
+        members={members}
       />
 
       {/* Reusable Dialogs for Main Workspace */}
