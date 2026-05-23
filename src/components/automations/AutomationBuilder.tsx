@@ -7,6 +7,8 @@ import { GroupSelector } from "./GroupSelector";
 import { FormBuilder } from "./FormBuilder";
 import { VariableManager } from "./VariableManager";
 import { AutomationSimulationPanel } from "./AutomationSimulationPanel";
+import { TemplateActionConfig } from "./TemplateActionConfig";
+import { RecurringTaskActionConfig } from "./RecurringTaskActionConfig";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Save, Play, Database } from "lucide-react";
@@ -250,6 +252,26 @@ export function AutomationBuilder({ flow: initialFlow, onSave, onClose }: Automa
               return (
                 <FormBuilder 
                   mode="briefing"
+                  onSave={handleSaveMessage}
+                  onCancel={() => setEditingStepId(null)}
+                />
+              );
+            }
+
+            if (step.type === 'apply_agency_template') {
+              return (
+                <TemplateActionConfig 
+                  initialConfig={step.config}
+                  onSave={handleSaveMessage}
+                  onCancel={() => setEditingStepId(null)}
+                />
+              );
+            }
+
+            if (step.type === 'create_recurring_task') {
+              return (
+                <RecurringTaskActionConfig 
+                  initialConfig={step.config}
                   onSave={handleSaveMessage}
                   onCancel={() => setEditingStepId(null)}
                 />

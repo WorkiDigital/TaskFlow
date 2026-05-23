@@ -34,26 +34,18 @@ function ProjectsWorkspace() {
   const [spacesList, setSpacesList] = useState<Space[]>(() => {
     try {
       const saved = localStorage.getItem("taskflow_spaces");
-      const spaces = saved ? JSON.parse(saved) : [];
+      if (saved) {
+        return JSON.parse(saved);
+      }
+      
       const defaultSpaces = [
         { id: 'sp-1', name: 'Marketing', color: 'bg-pink-500' },
         { id: 'sp-2', name: 'Tráfego Pago', color: 'bg-blue-500' },
         { id: 'sp-3', name: 'Design', color: 'bg-purple-500' },
         { id: 'sp-4', name: 'Lançamentos', color: 'bg-orange-500' }
       ];
-      let modified = false;
-      const updatedSpaces = [...spaces];
-      defaultSpaces.forEach(ds => {
-        if (!updatedSpaces.some(s => s.id === ds.id)) {
-          updatedSpaces.push(ds);
-          modified = true;
-        }
-      });
-      if (modified) {
-        localStorage.setItem("taskflow_spaces", JSON.stringify(updatedSpaces));
-        return updatedSpaces;
-      }
-      return spaces;
+      localStorage.setItem("taskflow_spaces", JSON.stringify(defaultSpaces));
+      return defaultSpaces;
     } catch (e) {
       return [];
     }

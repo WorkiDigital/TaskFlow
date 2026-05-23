@@ -57,7 +57,8 @@ export function AgencyTemplatesManager() {
     createTemplate,
     updateTemplate,
     deleteTemplate,
-    duplicateTemplate
+    duplicateTemplate,
+    isLoading
   } = useTemplateWorkspace();
 
   const [activeView, setActiveView] = useState<'list' | 'edit' | 'simulate'>('list');
@@ -101,30 +102,37 @@ export function AgencyTemplatesManager() {
     setActiveView('simulate');
   };
 
-  const handleImportGallery = () => {
+  const handleImportGallery = async () => {
     // Check which templates from mockAgencyTemplates are missing and import them
     let importedCount = 0;
-    mockAgencyTemplates.forEach(mockT => {
+    
+    // We must use a for...of loop to await the async calls properly
+    for (const mockT of mockAgencyTemplates) {
       const exists = templates.some(t => t.name === mockT.name);
       if (!exists) {
-        createTemplate({
-          name: mockT.name,
-          description: mockT.description,
-          category: mockT.category,
-          status: mockT.status,
-          columns: mockT.columns,
-          tasks: mockT.tasks,
-          automation: mockT.automation,
-          linkedContractTitle: mockT.linkedContractTitle
-        });
-        importedCount++;
+        try {
+          await createTemplate({
+            name: mockT.name,
+            description: mockT.description,
+            category: mockT.category,
+            status: mockT.status,
+            columns: mockT.columns,
+            tasks: mockT.tasks,
+            automation: mockT.automation,
+            linkedContractTitle: mockT.linkedContractTitle
+          });
+          importedCount++;
+        } catch (e: any) {
+          console.error(`Falha ao importar ${mockT.name}`, e);
+          toast.error(`Erro no ${mockT.name}: ${e?.message || JSON.stringify(e)}`);
+        }
       }
-    });
+    }
 
     if (importedCount > 0) {
       toast.success(`${importedCount} modelos importados da galeria com sucesso!`);
     } else {
-      toast.info('Todos os modelos padrões da galeria já estão importados.');
+      toast.info('Nenhum novo modelo para importar ou todos já existem.');
     }
   };
 
@@ -154,6 +162,17 @@ export function AgencyTemplatesManager() {
         templateId={selectedTemplateId}
         onBack={() => setActiveView('list')}
       />
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full min-h-[400px] items-center justify-center">
+        <div className="flex flex-col items-center gap-4 text-muted-foreground">
+          <RefreshCw className="h-8 w-8 animate-spin" />
+          <p>Carregando templates...</p>
+        </div>
+      </div>
     );
   }
 

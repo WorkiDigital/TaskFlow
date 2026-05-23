@@ -24,6 +24,8 @@ export type AutomationStepType =
   | 'wait_briefing_form'
   | 'notify_briefing_received'
   | 'finish_onboarding'
+  | 'apply_agency_template'
+  | 'create_recurring_task'
 
 export interface AutomationStep {
   id: string
