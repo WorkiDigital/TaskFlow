@@ -32,12 +32,13 @@ function SettingsPage() {
   
   const [autentiqueConfig, setAutentiqueConfig] = useState({
     token: '',
+    isConfigured: false,
   });
 
   useEffect(() => {
     settingsService.getSettings()
       .then((settings) => {
-        setAutentiqueConfig({ token: settings.autentique_token ?? '' });
+        setAutentiqueConfig(prev => ({ ...prev, isConfigured: settings.is_autentique_configured }));
       })
       .catch((error) => {
         console.error("[Settings] Erro ao carregar integracoes:", error);
@@ -49,7 +50,7 @@ function SettingsPage() {
   const saveAutentiqueConfig = async () => {
     try {
       const settings = await settingsService.updateAutentiqueToken(autentiqueConfig.token);
-      setAutentiqueConfig({ token: settings.autentique_token ?? '' });
+      setAutentiqueConfig({ token: '', isConfigured: settings.is_autentique_configured });
       toast.success("Integracao com Autentique salva!");
       setEditingIntegration(null);
     } catch (error) {
@@ -57,7 +58,7 @@ function SettingsPage() {
     }
   };
 
-  const isAutentiqueConfigured = Boolean(autentiqueConfig.token);
+  const isAutentiqueConfigured = autentiqueConfig.isConfigured;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto w-full px-4 py-6 md:px-8 md:py-8">
