@@ -14,6 +14,10 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { WhatsAppConnectionPanel } from "@/components/whatsapp/WhatsAppConnectionPanel";
 import { settingsService } from "@/services/settingsService";
+import { teamService, TeamMember } from "@/services/teamService";
+import { InviteMemberModal } from "@/components/team/InviteMemberModal";
+import { AgencyRolesModal } from "@/components/team/AgencyRolesModal";
+import { Loader2, Plus, Settings2 } from "lucide-react";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
@@ -27,6 +31,12 @@ function SettingsPage() {
   });
   const [notifs, setNotifs] = useState({ email: true, push: false, weekly: true });
   
+  // Team Management
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [isLoadingMembers, setIsLoadingMembers] = useState(true);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isRolesModalOpen, setIsRolesModalOpen] = useState(false);
+
   // Integrações
   const [editingIntegration, setEditingIntegration] = useState<'autentique' | null>(null);
   
@@ -34,6 +44,14 @@ function SettingsPage() {
     token: '',
     isConfigured: false,
   });
+
+  const loadMembers = () => {
+    setIsLoadingMembers(true);
+    teamService.getAgencyMembers()
+      .then(setMembers)
+      .catch((error) => console.error("[Settings] Erro ao carregar membros:", error))
+      .finally(() => setIsLoadingMembers(false));
+  };
 
   useEffect(() => {
     settingsService.getSettings()
@@ -44,6 +62,8 @@ function SettingsPage() {
         console.error("[Settings] Erro ao carregar integracoes:", error);
         toast.error("Nao foi possivel carregar as integracoes.");
       });
+
+    loadMembers();
   }, []);
 
 
@@ -112,23 +132,52 @@ function SettingsPage() {
           </GlassCard>
         </TabsContent>
 
-        <TabsContent value="team" className="space-y-3">
-          {teamMembers.map((m) => (
-            <GlassCard key={m.id} className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground">
-                    {m.initials}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-sm font-medium">{m.name}</p>
-                  <p className="text-xs text-muted-foreground">{m.role}</p>
-                </div>
-              </div>
-              <StatusBadge tone="success">Ativo</StatusBadge>
-            </GlassCard>
-          ))}
+        <TabsContent value="team" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2">
+              <Button onClick={() => setIsInviteModalOpen(true)} className="gap-2">
+                <Plus className="h-4 w-4" /> Convidar Membro
+              </Button>
+              <Button variant="outline" onClick={() => setIsRolesModalOpen(true)} className="gap-2">
+                <Settings2 className="h-4 w-4" /> Gerenciar Cargos
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {isLoadingMembers ? (
+              <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            ) : members.length === 0 ? (
+              <GlassCard className="p-8 text-center text-muted-foreground">Nenhum membro encontrado.</GlassCard>
+            ) : (
+              members.map((m) => (
+                <GlassCard key={m.id} className="flex items-center justify-between p-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground">
+                        {m.full_name?.substring(0, 2).toUpperCase() || m.email?.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium">{m.full_name || m.email}</p>
+                      <p className="text-xs text-muted-foreground flex gap-2">
+                        <span>{m.role === 'admin' ? 'Administrador' : 'Membro'}</span>
+                        {m.agency_role && (
+                          <>
+                            <span>&bull;</span>
+                            <span className="font-medium text-foreground">{m.agency_role.name}</span>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <StatusBadge tone="success">Ativo</StatusBadge>
+                  </div>
+                </GlassCard>
+              ))
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="whatsapp" className="mt-0">
@@ -218,6 +267,17 @@ function SettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modais de Equipe */}
+      <InviteMemberModal 
+        open={isInviteModalOpen} 
+        onOpenChange={setIsInviteModalOpen} 
+        onSuccess={loadMembers} 
+      />
+      <AgencyRolesModal 
+        open={isRolesModalOpen} 
+        onOpenChange={setIsRolesModalOpen} 
+      />
     </div>
   );
 }
