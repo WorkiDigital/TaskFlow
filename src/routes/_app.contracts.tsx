@@ -14,7 +14,7 @@ function ContractsPage() {
   }, []);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 max-w-7xl mx-auto w-full px-4 py-6 md:px-8 md:py-8">
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">Contratos</h2>
         <p className="text-sm text-muted-foreground">Acompanhe rascunhos, pendências e assinaturas.</p>

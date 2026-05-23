@@ -18,7 +18,7 @@ function Dashboard() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto w-full px-4 py-6 md:px-8 md:py-8">
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">Olá, Ana 👋</h2>
         <p className="text-sm text-muted-foreground">Aqui está o pulso da sua agência hoje.</p>

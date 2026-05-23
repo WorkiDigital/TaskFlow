@@ -1,7 +1,14 @@
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
 import type { Client, ClientStatus } from "@/lib/types";
-import { MoreHorizontal } from "lucide-react";
+import { Copy, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 const statusMap: Record<ClientStatus, { label: string; tone: Parameters<typeof StatusBadge>[0]["tone"] }> = {
   active: { label: "Ativo", tone: "success" },
@@ -14,6 +21,13 @@ const fmt = (n: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(n);
 
 export function ClientsTable({ clients }: { clients: Client[] }) {
+
+  const copyLink = (clientId: string) => {
+    const url = `${window.location.origin}/capture/${clientId}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Link copiado para a área de transferência!");
+  };
+
   return (
     <>
       {/* Desktop */}
@@ -43,9 +57,19 @@ export function ClientsTable({ clients }: { clients: Client[] }) {
                   <td className="px-4 py-3">{c.mrr > 0 ? fmt(c.mrr) : "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{new Date(c.createdAt).toLocaleDateString("pt-BR")}</td>
                   <td className="px-4 py-3 text-right">
-                    <Button variant="ghost" size="icon" aria-label="Ações">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" aria-label="Ações">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="glass-card">
+                        <DropdownMenuItem onClick={() => copyLink(c.id)} className="cursor-pointer">
+                          <Copy className="mr-2 h-4 w-4" />
+                          Copiar Link Captação
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </td>
                 </tr>
               );
@@ -59,15 +83,32 @@ export function ClientsTable({ clients }: { clients: Client[] }) {
         {clients.map((c) => {
           const s = statusMap[c.status];
           return (
-            <div key={c.id} className="glass-card p-4">
-              <div className="flex items-start justify-between gap-3">
+            <div key={c.id} className="glass-card p-4 relative">
+              <div className="absolute right-4 top-4">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" aria-label="Ações" className="h-6 w-6">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="glass-card">
+                    <DropdownMenuItem onClick={() => copyLink(c.id)} className="cursor-pointer">
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copiar Link Captação
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div className="flex items-start justify-between gap-3 pr-8">
                 <div className="min-w-0">
                   <p className="truncate font-medium">{c.name}</p>
                   <p className="truncate text-xs text-muted-foreground">{c.company}</p>
                 </div>
+              </div>
+              <div className="mt-2 mb-3">
                 <StatusBadge tone={s.tone}>{s.label}</StatusBadge>
               </div>
-              <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>MRR {c.mrr > 0 ? fmt(c.mrr) : "—"}</span>
                 <span>{new Date(c.createdAt).toLocaleDateString("pt-BR")}</span>
               </div>

@@ -11,12 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CaptureClientIdRouteImport } from './routes/capture.$clientId'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppProjectsRouteImport } from './routes/_app.projects'
 import { Route as AppOnboardingRouteImport } from './routes/_app.onboarding'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppContractsRouteImport } from './routes/_app.contracts'
 import { Route as AppClientsRouteImport } from './routes/_app.clients'
+import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -25,6 +27,11 @@ const AppRoute = AppRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CaptureClientIdRoute = CaptureClientIdRouteImport.update({
+  id: '/capture/$clientId',
+  path: '/capture/$clientId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
@@ -57,70 +64,88 @@ const AppClientsRoute = AppClientsRouteImport.update({
   path: '/clients',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAutomationsRoute = AppAutomationsRouteImport.update({
+  id: '/automations',
+  path: '/automations',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/automations': typeof AppAutomationsRoute
   '/clients': typeof AppClientsRoute
   '/contracts': typeof AppContractsRoute
   '/dashboard': typeof AppDashboardRoute
   '/onboarding': typeof AppOnboardingRoute
   '/projects': typeof AppProjectsRoute
   '/settings': typeof AppSettingsRoute
+  '/capture/$clientId': typeof CaptureClientIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/automations': typeof AppAutomationsRoute
   '/clients': typeof AppClientsRoute
   '/contracts': typeof AppContractsRoute
   '/dashboard': typeof AppDashboardRoute
   '/onboarding': typeof AppOnboardingRoute
   '/projects': typeof AppProjectsRoute
   '/settings': typeof AppSettingsRoute
+  '/capture/$clientId': typeof CaptureClientIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/_app/automations': typeof AppAutomationsRoute
   '/_app/clients': typeof AppClientsRoute
   '/_app/contracts': typeof AppContractsRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/onboarding': typeof AppOnboardingRoute
   '/_app/projects': typeof AppProjectsRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/capture/$clientId': typeof CaptureClientIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/automations'
     | '/clients'
     | '/contracts'
     | '/dashboard'
     | '/onboarding'
     | '/projects'
     | '/settings'
+    | '/capture/$clientId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/automations'
     | '/clients'
     | '/contracts'
     | '/dashboard'
     | '/onboarding'
     | '/projects'
     | '/settings'
+    | '/capture/$clientId'
   id:
     | '__root__'
     | '/'
     | '/_app'
+    | '/_app/automations'
     | '/_app/clients'
     | '/_app/contracts'
     | '/_app/dashboard'
     | '/_app/onboarding'
     | '/_app/projects'
     | '/_app/settings'
+    | '/capture/$clientId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  CaptureClientIdRoute: typeof CaptureClientIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -137,6 +162,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/capture/$clientId': {
+      id: '/capture/$clientId'
+      path: '/capture/$clientId'
+      fullPath: '/capture/$clientId'
+      preLoaderRoute: typeof CaptureClientIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/settings': {
@@ -181,10 +213,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppClientsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/automations': {
+      id: '/_app/automations'
+      path: '/automations'
+      fullPath: '/automations'
+      preLoaderRoute: typeof AppAutomationsRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppAutomationsRoute: typeof AppAutomationsRoute
   AppClientsRoute: typeof AppClientsRoute
   AppContractsRoute: typeof AppContractsRoute
   AppDashboardRoute: typeof AppDashboardRoute
@@ -194,6 +234,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAutomationsRoute: AppAutomationsRoute,
   AppClientsRoute: AppClientsRoute,
   AppContractsRoute: AppContractsRoute,
   AppDashboardRoute: AppDashboardRoute,
@@ -207,7 +248,18 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  CaptureClientIdRoute: CaptureClientIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

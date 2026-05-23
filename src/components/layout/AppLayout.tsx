@@ -12,8 +12,8 @@ export function AppLayout() {
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
         <Header />
-        <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
-          <div className="mx-auto w-full max-w-7xl animate-in fade-in duration-500">
+        <main className="flex-1 h-[calc(100vh-64px)] flex flex-col overflow-hidden">
+          <div className="w-full h-full animate-in fade-in duration-500 flex flex-col overflow-y-auto overflow-x-hidden">
             <Outlet />
           </div>
         </main>

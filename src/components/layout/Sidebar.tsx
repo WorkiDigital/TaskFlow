@@ -7,6 +7,7 @@ import {
   KanbanSquare,
   Settings,
   Sparkles,
+  Workflow,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 

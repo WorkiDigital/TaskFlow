@@ -6,8 +6,8 @@ import { Plus, Search, Users } from "lucide-react";
 import { ClientsTable } from "@/components/clients/ClientsTable";
 import { ClientFormDialog } from "@/components/clients/ClientFormDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { mockClients } from "@/lib/mock-data";
 import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/services/supabase";
 
 export const Route = createFileRoute("/_app/clients")({
   component: ClientsPage,
@@ -17,30 +17,54 @@ function ClientsPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [clients, setClients] = useState<any[]>([]);
+
+  const loadClients = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error(error);
+    } else {
+      // Map DB fields to what the frontend expects
+      const mapped = (data || []).map(c => ({
+        id: c.id,
+        name: c.name,
+        email: c.email || '',
+        company: c.name, // using name as company for now since we didn't add company to schema
+        status: 'active', // default status
+        mrr: 0,
+        createdAt: c.created_at,
+      }));
+      setClients(mapped);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    console.log("[Clients] carregando clientes (mock)");
-    const t = setTimeout(() => setLoading(false), 500);
-    return () => clearTimeout(t);
+    loadClients();
   }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return mockClients;
-    return mockClients.filter(
+    if (!q) return clients;
+    return clients.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
         c.email.toLowerCase().includes(q) ||
         c.company.toLowerCase().includes(q),
     );
-  }, [query]);
+  }, [query, clients]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto w-full px-4 py-6 md:px-8 md:py-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Clientes</h2>
-          <p className="text-sm text-muted-foreground">{mockClients.length} clientes na sua carteira</p>
+          <p className="text-sm text-muted-foreground">{clients.length} clientes na sua carteira</p>
         </div>
         <Button onClick={() => setOpen(true)} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Novo cliente
@@ -75,7 +99,7 @@ function ClientsPage() {
         <ClientsTable clients={filtered} />
       )}
 
-      <ClientFormDialog open={open} onOpenChange={setOpen} onCreate={() => setQuery("")} />
+      <ClientFormDialog open={open} onOpenChange={setOpen} onCreate={loadClients} />
     </div>
   );
 }
