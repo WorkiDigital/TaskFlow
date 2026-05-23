@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -183,7 +184,27 @@ function getDefaultContractTemplate() {
 }
 
 function makeContractFile(content: string) {
-  return new Blob([content], { type: "text/plain;charset=utf-8" });
+  const doc = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4"
+  });
+  
+  const lines = doc.splitTextToSize(content, 180);
+  let y = 15;
+  const pageHeight = doc.internal.pageSize.height;
+  
+  for (const line of lines) {
+    if (y > pageHeight - 20) {
+      doc.addPage();
+      y = 15;
+    }
+    doc.text(line, 15, y);
+    y += 7;
+  }
+  
+  const arrayBuffer = doc.output("arraybuffer");
+  return new Blob([arrayBuffer], { type: "application/pdf" });
 }
 
 async function logStep(
