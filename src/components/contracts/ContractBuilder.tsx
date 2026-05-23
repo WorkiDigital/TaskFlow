@@ -61,7 +61,6 @@ export function ContractBuilder() {
     });
     const result = await createDraft({
       title: form.title,
-      client_id: form.client,
       client_name: form.client,
       value: Number(form.value) || undefined,
       content: renderedContent,
@@ -86,6 +85,10 @@ export function ContractBuilder() {
     }
     if (!form.signerEmail.trim()) {
       toast.error("E-mail do signatário é obrigatório para enviar ao Autentique");
+      return;
+    }
+    if (!fileUrl) {
+      toast.error("Faça upload de um arquivo PDF ou DOCX antes de enviar ao Autentique");
       return;
     }
     // Atualiza signatário caso tenha mudado após salvar
