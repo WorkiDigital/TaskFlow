@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { IconRenderer } from '@/components/ui/IconRenderer';
 
 const EMOJIS = ['😊', '🎉', '🚀', '✅', '📋', '📝', '💬', '🔔', '🏁', '✍️', '📄', '💡', '🌟', '👋', '🙌', '💎', '⚡', '📊', '🔗', '📎'];
 
@@ -131,7 +132,7 @@ function MessageCard({ message, variables, expanded, onToggle, onUpdate }: Messa
         onClick={onToggle}
       >
         <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-lg shrink-0">
-          {message.icon}
+          <IconRenderer icon={message.icon} className="w-4 h-4" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground">{message.name}</p>

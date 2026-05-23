@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { OnboardingFlowStep } from '@/data/onboardingTypes';
 import type { SimulationLog, SimLogStatus } from '@/data/onboardingTypes';
+import { IconRenderer } from '@/components/ui/IconRenderer';
 
 interface SimulationTabProps {
   steps: OnboardingFlowStep[];
@@ -102,12 +103,12 @@ export function SimulationTab({ steps }: SimulationTabProps) {
         ));
         await delay(800);
         setLogs(prev => prev.map(l =>
-          l.stepId === step.id ? { ...l, status: 'done', message: `${step.icon} ${step.name} — concluído após retry` } : l
+          l.stepId === step.id ? { ...l, status: 'done', message: `${step.name} — concluído após retry` } : l
         ));
       } else {
         await delay(300);
         setLogs(prev => prev.map(l =>
-          l.stepId === step.id ? { ...l, status: 'done', message: `${step.icon} ${step.name} — concluído` } : l
+          l.stepId === step.id ? { ...l, status: 'done', message: `${step.name} — concluído` } : l
         ));
       }
       scrollToEnd();
@@ -121,7 +122,7 @@ export function SimulationTab({ steps }: SimulationTabProps) {
           stepId: s.id,
           stepName: s.name,
           status: 'skipped' as SimLogStatus,
-          message: `${s.icon} ${s.name} — desativado`,
+          message: `${s.name} — desativado`,
           ts: Date.now(),
         })),
       ]);
@@ -193,7 +194,7 @@ export function SimulationTab({ steps }: SimulationTabProps) {
                 sc.className
               )}
             >
-              <span className="text-base shrink-0">{step.icon}</span>
+              <span className="text-base shrink-0"><IconRenderer icon={step.icon} className="w-5 h-5" /></span>
               <span className={cn('text-xs font-medium flex-1 truncate', !step.enabled && 'line-through opacity-50')}>
                 {step.name}
               </span>

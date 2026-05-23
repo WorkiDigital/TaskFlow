@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useOnboardingWorkspace } from '@/hooks/useOnboardingWorkspace';
 import { GroupSelector } from './GroupSelector';
+import { IconRenderer } from '@/components/ui/IconRenderer';
 
 interface FlowsTabProps {
   steps: OnboardingFlowStep[];
@@ -132,7 +133,7 @@ export function FlowsTab({ steps, onToggle, onUpdate }: FlowsTabProps) {
                 'w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 transition-all duration-300',
                 step.enabled ? 'bg-primary/10 shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]' : 'bg-white/5'
               )}>
-                {step.icon}
+                <IconRenderer icon={step.icon} className="w-5 h-5" />
               </div>
 
               {/* Info principal */}
