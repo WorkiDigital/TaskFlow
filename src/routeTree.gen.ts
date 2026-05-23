@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as FormFormIdRouteImport } from './routes/form.$formId'
 import { Route as CaptureClientIdRouteImport } from './routes/capture.$clientId'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppProjectsRouteImport } from './routes/_app.projects'
@@ -27,6 +28,11 @@ const AppRoute = AppRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FormFormIdRoute = FormFormIdRouteImport.update({
+  id: '/form/$formId',
+  path: '/form/$formId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CaptureClientIdRoute = CaptureClientIdRouteImport.update({
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/projects': typeof AppProjectsRoute
   '/settings': typeof AppSettingsRoute
   '/capture/$clientId': typeof CaptureClientIdRoute
+  '/form/$formId': typeof FormFormIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/projects': typeof AppProjectsRoute
   '/settings': typeof AppSettingsRoute
   '/capture/$clientId': typeof CaptureClientIdRoute
+  '/form/$formId': typeof FormFormIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/_app/projects': typeof AppProjectsRoute
   '/_app/settings': typeof AppSettingsRoute
   '/capture/$clientId': typeof CaptureClientIdRoute
+  '/form/$formId': typeof FormFormIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/projects'
     | '/settings'
     | '/capture/$clientId'
+    | '/form/$formId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/projects'
     | '/settings'
     | '/capture/$clientId'
+    | '/form/$formId'
   id:
     | '__root__'
     | '/'
@@ -140,12 +151,14 @@ export interface FileRouteTypes {
     | '/_app/projects'
     | '/_app/settings'
     | '/capture/$clientId'
+    | '/form/$formId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   CaptureClientIdRoute: typeof CaptureClientIdRoute
+  FormFormIdRoute: typeof FormFormIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -162,6 +175,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/form/$formId': {
+      id: '/form/$formId'
+      path: '/form/$formId'
+      fullPath: '/form/$formId'
+      preLoaderRoute: typeof FormFormIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/capture/$clientId': {
@@ -249,6 +269,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   CaptureClientIdRoute: CaptureClientIdRoute,
+  FormFormIdRoute: FormFormIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

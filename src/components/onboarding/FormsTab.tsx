@@ -141,7 +141,7 @@ export function FormsTab({ templates, variables, onSave, onDuplicate, onDelete, 
                 <Button
                   variant="ghost" size="sm"
                   onClick={() => {
-                    navigator.clipboard.writeText(`https://app.taskflow.com/f/${selectedForm.id}`);
+                    navigator.clipboard.writeText(`${window.location.origin}/form/${selectedForm.id}`);
                     toast.success('Link público copiado!');
                   }}
                   className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
@@ -288,7 +288,7 @@ function FormCard({ form, selected, onSelect, onDuplicate, onDelete, onSetDefaul
       <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
         <button onClick={(e) => {
           e.stopPropagation();
-          navigator.clipboard.writeText(`https://app.taskflow.com/f/${form.id}`);
+          navigator.clipboard.writeText(`${window.location.origin}/form/${form.id}`);
           toast.success('Link público copiado!');
         }} className="p-1 rounded hover:bg-white/10 text-muted-foreground hover:text-foreground" title="Copiar Link Público">
           <Link2 className="w-3 h-3" />

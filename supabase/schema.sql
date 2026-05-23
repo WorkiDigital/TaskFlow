@@ -117,6 +117,14 @@ CREATE TABLE onboarding_step_logs (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+CREATE TABLE form_submissions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  form_id TEXT NOT NULL,
+  client_id UUID REFERENCES clients(id) ON DELETE SET NULL,
+  payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+  submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- RLS (Row Level Security) Policies
 -- (For MVP, we enable RLS but allow authenticated users to access mostly everything. In production, policies should be stricter based on role).
 
@@ -131,6 +139,7 @@ ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE onboarding_workspace ENABLE ROW LEVEL SECURITY;
 ALTER TABLE onboarding_runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE onboarding_step_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE form_submissions ENABLE ROW LEVEL SECURITY;
 
 -- Allow read/write for authenticated users on most tables for MVP
 CREATE POLICY "Enable all for authenticated users" ON agency_settings FOR ALL TO authenticated USING (true) WITH CHECK (true);
@@ -144,3 +153,5 @@ CREATE POLICY "Enable all for authenticated users" ON tasks FOR ALL TO authentic
 CREATE POLICY "Enable all for authenticated users" ON onboarding_workspace FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Enable read for authenticated users" ON onboarding_runs FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Enable read for authenticated users" ON onboarding_step_logs FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Enable insert for anon users" ON form_submissions FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "Enable read for authenticated users" ON form_submissions FOR SELECT TO authenticated USING (true);
