@@ -28,7 +28,8 @@ const iconMap: Record<string, React.FC<LucideProps>> = {
   party: PartyPopper,
   bell: Bell,
   check: Check,
-  alert: AlertTriangle
+  alert: AlertTriangle,
+  memo: FileText
 };
 
 export function IconRenderer({ icon, className, ...props }: IconRendererProps) {
