@@ -14,6 +14,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FormFormIdRouteImport } from './routes/form.$formId'
 import { Route as CaptureClientIdRouteImport } from './routes/capture.$clientId'
+import { Route as AppTemplatesRouteImport } from './routes/_app.templates'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppProjectsRouteImport } from './routes/_app.projects'
 import { Route as AppOnboardingRouteImport } from './routes/_app.onboarding'
@@ -45,6 +46,11 @@ const CaptureClientIdRoute = CaptureClientIdRouteImport.update({
   id: '/capture/$clientId',
   path: '/capture/$clientId',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppTemplatesRoute = AppTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
@@ -92,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof AppOnboardingRoute
   '/projects': typeof AppProjectsRoute
   '/settings': typeof AppSettingsRoute
+  '/templates': typeof AppTemplatesRoute
   '/capture/$clientId': typeof CaptureClientIdRoute
   '/form/$formId': typeof FormFormIdRoute
 }
@@ -105,6 +112,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AppOnboardingRoute
   '/projects': typeof AppProjectsRoute
   '/settings': typeof AppSettingsRoute
+  '/templates': typeof AppTemplatesRoute
   '/capture/$clientId': typeof CaptureClientIdRoute
   '/form/$formId': typeof FormFormIdRoute
 }
@@ -120,6 +128,7 @@ export interface FileRoutesById {
   '/_app/onboarding': typeof AppOnboardingRoute
   '/_app/projects': typeof AppProjectsRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/_app/templates': typeof AppTemplatesRoute
   '/capture/$clientId': typeof CaptureClientIdRoute
   '/form/$formId': typeof FormFormIdRoute
 }
@@ -135,6 +144,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/projects'
     | '/settings'
+    | '/templates'
     | '/capture/$clientId'
     | '/form/$formId'
   fileRoutesByTo: FileRoutesByTo
@@ -148,6 +158,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/projects'
     | '/settings'
+    | '/templates'
     | '/capture/$clientId'
     | '/form/$formId'
   id:
@@ -162,6 +173,7 @@ export interface FileRouteTypes {
     | '/_app/onboarding'
     | '/_app/projects'
     | '/_app/settings'
+    | '/_app/templates'
     | '/capture/$clientId'
     | '/form/$formId'
   fileRoutesById: FileRoutesById
@@ -210,6 +222,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/capture/$clientId'
       preLoaderRoute: typeof CaptureClientIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/templates': {
+      id: '/_app/templates'
+      path: '/templates'
+      fullPath: '/templates'
+      preLoaderRoute: typeof AppTemplatesRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/settings': {
       id: '/_app/settings'
@@ -271,6 +290,7 @@ interface AppRouteChildren {
   AppOnboardingRoute: typeof AppOnboardingRoute
   AppProjectsRoute: typeof AppProjectsRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppTemplatesRoute: typeof AppTemplatesRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -281,6 +301,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppOnboardingRoute: AppOnboardingRoute,
   AppProjectsRoute: AppProjectsRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppTemplatesRoute: AppTemplatesRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

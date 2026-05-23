@@ -35,11 +35,13 @@ export interface AutomationStep {
   configStatus: 'not_configured' | 'partial' | 'configured'
   isAutomatic: boolean
   dependsOn?: AutomationStepType[]
+  config?: any
 }
 
 export interface AutomationFlow {
   id: string
   name: string
+  description?: string
   mode: AutomationMode
   status: 'active' | 'paused' | 'draft'
   steps: AutomationStep[]

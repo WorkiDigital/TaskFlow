@@ -8,6 +8,7 @@ import {
   Settings,
   Sparkles,
   Workflow,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +18,7 @@ export const navItems = [
   { to: "/onboarding", label: "Onboarding", icon: Rocket, subtitle: "Novos clientes em jornada" },
   { to: "/contracts", label: "Contratos", icon: FileText, subtitle: "Documentos e assinaturas" },
   { to: "/projects", label: "Projetos", icon: KanbanSquare, subtitle: "Entregas em andamento" },
+  { to: "/templates", label: "Templates", icon: Layers, subtitle: "Modelos operacionais de projeto" },
   { to: "/settings", label: "Configurações", icon: Settings, subtitle: "Sua agência e equipe" },
 ] as const;
 

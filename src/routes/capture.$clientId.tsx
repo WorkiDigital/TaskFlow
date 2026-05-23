@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/services/supabase";
+import { onboardingService } from "@/services/onboardingService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,13 +68,37 @@ function CaptureForm() {
       })
       .eq("id", clientId);
 
-    setSubmitting(false);
-
     if (error) {
       console.error(error);
       toast.error("Erro ao salvar os dados.");
+      setSubmitting(false);
     } else {
-      setSuccess(true);
+      try {
+        const payload = {
+          nome_cliente: { label: "Nome completo", value: form.name },
+          email_cliente: { label: "E-mail", value: form.email },
+          telefone_cliente: { label: "Telefone / WhatsApp", value: form.phone },
+          cpf_cnpj_cliente: { label: "CPF ou CNPJ", value: form.cnpj_cpf },
+          endereco_cliente: { label: "Endereço completo", value: form.address },
+          nome_projeto: { label: "Nome do projeto", value: `Onboarding ${form.name}` },
+          valor_projeto: { label: "Valor do projeto", value: "0" },
+          prazo_projeto: { label: "Prazo de entrega", value: new Date().toISOString().split('T')[0] }
+        };
+
+        await onboardingService.submitPublicForm({
+          formId: "form_contractual_default",
+          clientId,
+          payload
+        });
+        
+        setSuccess(true);
+      } catch (onbErr) {
+        console.error("Error resuming onboarding:", onbErr);
+        toast.warning("Dados salvos, mas houve um problema ao iniciar a automação.");
+        setSuccess(true);
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
 

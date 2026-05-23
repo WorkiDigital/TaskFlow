@@ -19,6 +19,7 @@ export interface Project {
   startDate: string;
   dueDate: string;
   members: string[];
+  templateOrigin?: string;
 }
 
 export interface KanbanColumn {
@@ -102,6 +103,7 @@ export const mockProjectsList: Project[] = [
     startDate: "2026-05-01",
     dueDate: "2026-05-30",
     members: ["MC", "RT"],
+    templateOrigin: "Lançamento de Infoproduto 30 Dias",
   },
   {
     id: "p-2",

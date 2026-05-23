@@ -76,6 +76,7 @@ export const onboardingService = {
   }) {
     return invoke<{ runId: string | null; status: string; logs: OnboardingRunLog[] }>('onboarding-execute', {
       action: 'form_submitted',
+      appOrigin: window.location.origin,
       ...input,
     });
   },

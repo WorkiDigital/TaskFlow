@@ -241,6 +241,18 @@ serve(async (req) => {
       payload?: Record<string, unknown>;
     };
 
+    let resolvedOrigin = appOrigin;
+    if (!resolvedOrigin) {
+      const headerOrigin = req.headers.get("origin") || req.headers.get("referer") || "";
+      if (headerOrigin) {
+        try {
+          resolvedOrigin = new URL(headerOrigin).origin;
+        } catch {
+          resolvedOrigin = headerOrigin;
+        }
+      }
+    }
+
     if (!["start", "form_submitted"].includes(action)) throw new Error("Acao invalida para onboarding-execute.");
 
     const { data: workspaceRow, error: workspaceError } = await supabase
@@ -336,8 +348,8 @@ serve(async (req) => {
       empresa_cliente: client.address ?? "",
       nome_agencia: settings.name ?? "Agencia",
       nome_projeto: `Projeto ${client.address || client.name}`,
-      link_formulario_contrato: appOrigin ? `${String(appOrigin).replace(/\/$/, "")}/form/${getDefaultFormId(state, "contractual")}?clientId=${client.id}` : "",
-      link_formulario_briefing: appOrigin ? `${String(appOrigin).replace(/\/$/, "")}/form/${getDefaultFormId(state, "briefing")}?clientId=${client.id}` : "",
+      link_formulario_contrato: resolvedOrigin ? `${String(resolvedOrigin).replace(/\/$/, "")}/form/${getDefaultFormId(state, "contractual")}?clientId=${client.id}` : "",
+      link_formulario_briefing: resolvedOrigin ? `${String(resolvedOrigin).replace(/\/$/, "")}/form/${getDefaultFormId(state, "briefing")}?clientId=${client.id}` : "",
       link_google_drive: "",
       ...submissionValues,
     };
@@ -375,7 +387,9 @@ serve(async (req) => {
           if (!clientPhone) throw new Error("Cliente sem telefone para envio do formulario contratual.");
           const template = getMessage(state, "msg_send_contractual", "Ola, {{nome_cliente}}! Vamos iniciar seu onboarding: {{link_formulario_contrato}}");
           const text = renderTemplate(
-            template.replace("[Clique aqui para preencher]", "{{link_formulario_contrato}}"),
+            template
+              .replace("[Clique aqui para preencher]", "{{link_formulario_contrato}}")
+              .replace("[link em configuracao]", "{{link_formulario_contrato}}"),
             variables,
           );
           await sendText(clientPhone, text);
@@ -552,7 +566,9 @@ serve(async (req) => {
           if (!clientPhone) throw new Error("Cliente sem telefone para envio do briefing.");
           const template = getMessage(state, "msg_send_briefing", "Preencha o briefing do projeto, {{nome_cliente}}: {{link_formulario_briefing}}");
           const text = renderTemplate(
-            template.replace("[Clique aqui para preencher]", "{{link_formulario_briefing}}"),
+            template
+              .replace("[Clique aqui para preencher]", "{{link_formulario_briefing}}")
+              .replace("[link em configuracao]", "{{link_formulario_briefing}}"),
             variables,
           );
           await sendText(clientPhone, text);

@@ -208,7 +208,7 @@ function SettingsPage() {
                 type="password"
                 placeholder="Insira seu Token do Autentique" 
                 value={autentiqueConfig.token}
-                onChange={e => setAutentiqueConfig({token: e.target.value})}
+                onChange={e => setAutentiqueConfig(prev => ({ ...prev, token: e.target.value }))}
               />
             </div>
           </div>

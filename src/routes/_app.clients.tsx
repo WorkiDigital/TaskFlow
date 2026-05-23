@@ -8,6 +8,7 @@ import { ClientFormDialog } from "@/components/clients/ClientFormDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/services/supabase";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/clients")({
   component: ClientsPage,
@@ -42,6 +43,27 @@ function ClientsPage() {
       setClients(mapped);
     }
     setLoading(false);
+  };
+
+  const handleDeleteClient = async (id: string) => {
+    const confirm = window.confirm("Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.");
+    if (!confirm) return;
+
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        toast.error("Erro ao excluir cliente: " + error.message);
+      } else {
+        toast.success("Cliente excluído com sucesso!");
+        loadClients();
+      }
+    } catch (err) {
+      toast.error("Erro inesperado ao excluir cliente.");
+    }
   };
 
   useEffect(() => {
@@ -96,7 +118,7 @@ function ClientsPage() {
           onAction={() => setOpen(true)}
         />
       ) : (
-        <ClientsTable clients={filtered} />
+        <ClientsTable clients={filtered} onDelete={handleDeleteClient} />
       )}
 
       <ClientFormDialog open={open} onOpenChange={setOpen} onCreate={loadClients} />

@@ -9,6 +9,13 @@ import { Users, Info, Settings2, BellRing, Phone, MessageSquare, Loader2, Refres
 import { evolutionService } from "@/services/evolutionService";
 import type { WhatsAppGroup } from "@/data/mockWhatsAppConnection";
 
+interface NotifyEvents {
+  onboardingStarted: boolean;
+  contractSigned: boolean;
+  briefingReceived: boolean;
+  error: boolean;
+}
+
 interface GroupSelectorProps {
   type: 'client' | 'internal';
   onSave: (config: any) => void;
@@ -25,7 +32,7 @@ export function GroupSelector({ type, onSave, onCancel, initialConfig }: GroupSe
   const [description, setDescription] = useState(initialConfig?.description ?? "Grupo oficial de acompanhamento do projeto.");
   const [internalGroupId, setInternalGroupId] = useState(initialConfig?.internalGroupId ?? "");
   const [internalGroupName, setInternalGroupName] = useState(initialConfig?.internalGroupName ?? "");
-  const [notifyEvents, setNotifyEvents] = useState(initialConfig?.notifyEvents ?? {
+  const [notifyEvents, setNotifyEvents] = useState<NotifyEvents>(initialConfig?.notifyEvents ?? {
     onboardingStarted: true,
     contractSigned: true,
     briefingReceived: true,
@@ -59,7 +66,7 @@ export function GroupSelector({ type, onSave, onCancel, initialConfig }: GroupSe
       onSave({
         createAutomatic,
         groupName,
-        participants: participants.split(',').map(p => p.trim()).filter(Boolean),
+        participants: participants.split(',').map((p: string) => p.trim()).filter(Boolean),
         description,
       });
     } else {

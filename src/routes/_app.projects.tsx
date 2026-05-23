@@ -21,7 +21,7 @@ import { CreateTaskModal } from "@/components/projects/CreateTaskModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, X, Trash2, Plus, Clock, Folder } from "lucide-react";
+import { Sparkles, X, Trash2, Plus, Clock, Folder, FolderSync } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PromptDialog, ConfirmDialog } from "@/components/projects/CustomDialog";
@@ -34,7 +34,26 @@ function ProjectsWorkspace() {
   const [spacesList, setSpacesList] = useState<Space[]>(() => {
     try {
       const saved = localStorage.getItem("taskflow_spaces");
-      return saved ? JSON.parse(saved) : [];
+      const spaces = saved ? JSON.parse(saved) : [];
+      const defaultSpaces = [
+        { id: 'sp-1', name: 'Marketing', color: 'bg-pink-500' },
+        { id: 'sp-2', name: 'Tráfego Pago', color: 'bg-blue-500' },
+        { id: 'sp-3', name: 'Design', color: 'bg-purple-500' },
+        { id: 'sp-4', name: 'Lançamentos', color: 'bg-orange-500' }
+      ];
+      let modified = false;
+      const updatedSpaces = [...spaces];
+      defaultSpaces.forEach(ds => {
+        if (!updatedSpaces.some(s => s.id === ds.id)) {
+          updatedSpaces.push(ds);
+          modified = true;
+        }
+      });
+      if (modified) {
+        localStorage.setItem("taskflow_spaces", JSON.stringify(updatedSpaces));
+        return updatedSpaces;
+      }
+      return spaces;
     } catch (e) {
       return [];
     }
@@ -523,13 +542,19 @@ function ProjectsWorkspace() {
             {/* Header / Tabs */}
             <div className="bg-black/20 shrink-0">
               <div className="px-6 pt-4 pb-2 flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-xl font-bold tracking-tight">
                     {activeProject.name}
                   </h2>
                   <span className="text-xs font-normal text-muted-foreground bg-white/5 px-2 py-0.5 rounded-full mt-1">
                     {activeProject.clientName}
                   </span>
+                  {activeProject.templateOrigin && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-primary bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-full mt-1">
+                      <FolderSync className="w-3 h-3 text-primary animate-pulse" />
+                      Template: {activeProject.templateOrigin}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   <Button 

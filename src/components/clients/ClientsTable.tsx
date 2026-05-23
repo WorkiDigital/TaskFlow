@@ -1,7 +1,7 @@
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
 import type { Client, ClientStatus } from "@/lib/types";
-import { Copy, MoreHorizontal } from "lucide-react";
+import { Copy, MoreHorizontal, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +20,7 @@ const statusMap: Record<ClientStatus, { label: string; tone: Parameters<typeof S
 const fmt = (n: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(n);
 
-export function ClientsTable({ clients }: { clients: Client[] }) {
+export function ClientsTable({ clients, onDelete }: { clients: Client[]; onDelete: (id: string) => void }) {
 
   const copyLink = (clientId: string) => {
     const url = `${window.location.origin}/capture/${clientId}`;
@@ -68,6 +68,13 @@ export function ClientsTable({ clients }: { clients: Client[] }) {
                           <Copy className="mr-2 h-4 w-4" />
                           Copiar Link Captação
                         </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => onDelete(c.id)} 
+                          className="cursor-pointer text-red-400 focus:bg-red-500/20 focus:text-red-300"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Excluir Cliente
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </td>
@@ -95,6 +102,13 @@ export function ClientsTable({ clients }: { clients: Client[] }) {
                     <DropdownMenuItem onClick={() => copyLink(c.id)} className="cursor-pointer">
                       <Copy className="mr-2 h-4 w-4" />
                       Copiar Link Captação
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => onDelete(c.id)} 
+                      className="cursor-pointer text-red-400 focus:bg-red-500/20 focus:text-red-300"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Excluir Cliente
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

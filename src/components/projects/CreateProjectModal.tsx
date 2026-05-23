@@ -42,6 +42,7 @@ export function CreateProjectModal({ open, onOpenChange, onCreate }: CreateProje
     setTimeout(() => {
       const newProject: Project = {
         id: `p-${Date.now()}`,
+        spaceId: "sp-1",
         name: form.name,
         clientName: form.clientName,
         status: form.status,

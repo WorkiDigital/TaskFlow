@@ -50,7 +50,7 @@ export function FlowsTab({ steps, onToggle, onUpdate }: FlowsTabProps) {
       const depStep = steps.find(s => s.id === depId);
       if (!depStep) continue;
       if (!depStep.enabled) return true; // Error se dependência está desligada
-      if (depStep.order >= step.order) return true; // Error se dependência vem depois
+      if ((depStep.order ?? 0) >= (step.order ?? 0)) return true; // Error se dependência vem depois
     }
     return false;
   };
@@ -94,7 +94,7 @@ export function FlowsTab({ steps, onToggle, onUpdate }: FlowsTabProps) {
       </div>
 
       <div className="space-y-2">
-        {steps.sort((a, b) => a.order - b.order).map((step, idx) => {
+        {steps.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((step, idx) => {
           const isFirst = idx === 0;
           const isLast = idx === steps.length - 1;
           const hasDependencyError = checkDependencyError(step);

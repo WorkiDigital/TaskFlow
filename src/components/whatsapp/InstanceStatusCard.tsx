@@ -19,10 +19,10 @@ export function InstanceStatusCard({ instance, onConnect, onDisconnect, onRefres
       case 'connected': return <StatusBadge tone="success">Conectado</StatusBadge>;
       case 'waiting_qr': return <StatusBadge tone="warning">Aguardando QR Code</StatusBadge>;
       case 'connecting': return <StatusBadge tone="neutral">Conectando...</StatusBadge>;
-      case 'error': return <StatusBadge tone="destructive">Erro</StatusBadge>;
-      case 'expired': return <StatusBadge tone="destructive">Expirado</StatusBadge>;
+      case 'error': return <StatusBadge tone="danger">Erro</StatusBadge>;
+      case 'expired': return <StatusBadge tone="danger">Expirado</StatusBadge>;
       case 'disconnected':
-      default: return <StatusBadge tone="destructive">Desconectado</StatusBadge>;
+      default: return <StatusBadge tone="danger">Desconectado</StatusBadge>;
     }
   };
 

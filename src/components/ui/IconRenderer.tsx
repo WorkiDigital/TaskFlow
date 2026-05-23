@@ -13,7 +13,7 @@ import {
   type LucideProps
 } from 'lucide-react';
 
-interface IconRendererProps extends Omit<React.HTMLAttributes<HTMLSpanElement>, 'color'>, LucideProps {
+interface IconRendererProps extends LucideProps {
   icon: string;
 }
 
