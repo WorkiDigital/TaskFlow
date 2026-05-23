@@ -605,7 +605,7 @@ serve(async (req) => {
 
           if (extraParticipants.length > 0) {
             await requestEvolution(`${baseUrl}/group/updateParticipant/${instanceName}`, instanceApiKey, {
-              method: "PUT",
+              method: "POST",
               body: JSON.stringify({ groupJid: clientGroupJid, action: "add", participants: extraParticipants }),
             });
             logs.push(await logStep(supabase, runId, step, "completed",
@@ -627,7 +627,7 @@ serve(async (req) => {
             variables,
           );
           await requestEvolution(`${baseUrl}/group/updateGroupDescription/${instanceName}`, instanceApiKey, {
-            method: "PUT",
+            method: "POST",
             body: JSON.stringify({ groupJid: clientGroupJid, description }),
           });
           logs.push(await logStep(supabase, runId, step, "completed",
