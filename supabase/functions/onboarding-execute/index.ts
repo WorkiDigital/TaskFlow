@@ -38,6 +38,12 @@ type AgencySettings = {
   autentique_token: string | null;
 };
 
+type ContractTemplateRow = {
+  id: string;
+  name: string;
+  content: string;
+};
+
 function getSupabaseAdmin() {
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY") ?? "";
   return createClient(
@@ -75,6 +81,26 @@ async function requestEvolution(url: string, apiKey: string, init?: RequestInit)
     const message = payload?.response?.message ?? payload?.message ?? payload?.error;
     const detail = Array.isArray(message) ? message.join(" ") : message;
     throw new Error(detail ?? `Evolution API retornou HTTP ${response.status}: ${responseText || response.statusText}`);
+  }
+
+  return payload;
+}
+
+async function requestAutentique(token: string, formData: FormData) {
+  const response = await fetch("https://api.autentique.com.br/v2/graphql", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok || payload.errors) {
+    const message = Array.isArray(payload.errors)
+      ? payload.errors.map((item: { message?: string }) => item.message).filter(Boolean).join(" ")
+      : payload.message;
+    throw new Error(message || `Autentique retornou HTTP ${response.status}`);
   }
 
   return payload;
@@ -137,6 +163,29 @@ function getFormType(state: WorkspaceState, formId: string): "contractual" | "br
   const form = state.formTemplates?.find(item => item.id === formId);
   if (form?.type) return form.type;
   return formId.includes("briefing") ? "briefing" : "contractual";
+}
+
+function getDefaultContractTemplate() {
+  return [
+    "CONTRATO DE PRESTACAO DE SERVICOS",
+    "",
+    "CONTRATANTE: {{nome_cliente}}",
+    "E-MAIL: {{email_cliente}}",
+    "CPF/CNPJ: {{cpf_cnpj_cliente}}",
+    "ENDERECO: {{endereco_cliente}}",
+    "",
+    "PROJETO: {{nome_projeto}}",
+    "VALOR: {{valor_projeto}}",
+    "PRAZO: {{prazo_projeto}}",
+    "",
+    "A agencia {{nome_agencia}} prestara os servicos relacionados ao projeto descrito acima, conforme alinhamentos comerciais realizados entre as partes.",
+    "",
+    "Este documento foi gerado automaticamente pelo TaskFlow a partir dos dados preenchidos no formulario contratual.",
+  ].join("\n");
+}
+
+function makeContractFile(content: string) {
+  return new Blob([content], { type: "text/plain;charset=utf-8" });
 }
 
 async function logStep(
@@ -278,6 +327,7 @@ serve(async (req) => {
     const instanceApiKey = await getInstanceApiKey(baseUrl, globalApiKey, instanceName);
     const clientPhone = normalizePhone(client.phone);
     let clientGroupJid = client.whatsapp_group_id ?? "";
+    let generatedContract: { id: string; content: string; signerEmail: string; signerName: string } | null = null;
 
     const variables = {
       nome_cliente: client.name,
@@ -334,13 +384,115 @@ serve(async (req) => {
           hadSkippedRequiredStep = true;
           logs.push(await logStep(supabase, runId, step, "skipped", "Aguardando webhook/formulario real. Etapa registrada como pendente."));
         } else if (step.id === "generate_contract") {
-          hadSkippedRequiredStep = true;
-          logs.push(await logStep(supabase, runId, step, "skipped", "Geracao real de contrato ainda depende de template/documento configurado."));
+          const { data: template, error: templateError } = await supabase
+            .from("contract_templates")
+            .select("id, name, content")
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle<ContractTemplateRow>();
+          if (templateError) throw templateError;
+
+          const content = renderTemplate(template?.content ?? getDefaultContractTemplate(), variables);
+          const signerEmail = String(variables.email_cliente || client.email || "").trim();
+          const signerName = String(variables.nome_cliente || client.name).trim();
+
+          const { data: contract, error: contractError } = await supabase
+            .from("contracts")
+            .insert({
+              client_id: client.id,
+              template_id: template?.id ?? null,
+              status: "draft",
+              content,
+              signer_name: signerName,
+              signer_email: signerEmail,
+            })
+            .select("id, content, signer_email, signer_name")
+            .single<{ id: string; content: string; signer_email: string | null; signer_name: string | null }>();
+          if (contractError) throw contractError;
+
+          generatedContract = {
+            id: contract.id,
+            content: contract.content,
+            signerEmail: contract.signer_email ?? signerEmail,
+            signerName: contract.signer_name ?? signerName,
+          };
+
+          logs.push(await logStep(supabase, runId, step, "completed", "Contrato gerado e salvo no banco.", {
+            contractId: generatedContract.id,
+            templateId: template?.id ?? "default",
+          }));
         } else if (step.id === "send_contract_signature") {
-          hadSkippedRequiredStep = true;
-          logs.push(await logStep(supabase, runId, step, "skipped", settings.autentique_token
-            ? "Token Autentique existe, mas falta documento/template para envio real."
-            : "Autentique ainda nao configurado para envio real."));
+          if (!settings.autentique_token) {
+            hadSkippedRequiredStep = true;
+            logs.push(await logStep(supabase, runId, step, "skipped", "Autentique ainda nao configurado para envio real."));
+            continue;
+          }
+
+          if (!generatedContract) {
+            const { data: latestContract, error: latestContractError } = await supabase
+              .from("contracts")
+              .select("id, content, signer_email, signer_name")
+              .eq("client_id", client.id)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle<{ id: string; content: string | null; signer_email: string | null; signer_name: string | null }>();
+            if (latestContractError) throw latestContractError;
+            if (latestContract?.id && latestContract.content) {
+              generatedContract = {
+                id: latestContract.id,
+                content: latestContract.content,
+                signerEmail: latestContract.signer_email ?? client.email ?? "",
+                signerName: latestContract.signer_name ?? client.name,
+              };
+            }
+          }
+
+          if (!generatedContract?.content) throw new Error("Nenhum contrato gerado para envio ao Autentique.");
+          if (!generatedContract.signerEmail) throw new Error("Cliente sem e-mail para assinatura no Autentique.");
+
+          const operations = {
+            query: `mutation CreateDocumentMutation($document: DocumentInput!, $signers: [SignerInput!]!, $file: Upload!) {
+              createDocument(document: $document, signers: $signers, file: $file) {
+                id
+                name
+                signatures {
+                  public_id
+                  name
+                  email
+                  link { short_link }
+                }
+              }
+            }`,
+            variables: {
+              document: { name: `Contrato - ${variables.nome_cliente || client.name}` },
+              signers: [{ email: generatedContract.signerEmail, name: generatedContract.signerName, action: "SIGN" }],
+              file: null,
+            },
+          };
+          const formData = new FormData();
+          formData.append("operations", JSON.stringify(operations));
+          formData.append("map", JSON.stringify({ file: ["variables.file"] }));
+          formData.append("file", makeContractFile(generatedContract.content), `contrato-${generatedContract.id}.txt`);
+
+          const autentiquePayload = await requestAutentique(settings.autentique_token, formData);
+          const document = autentiquePayload?.data?.createDocument ?? {};
+          const signatureUrl = document?.signatures?.[0]?.link?.short_link ?? null;
+
+          await supabase
+            .from("contracts")
+            .update({
+              status: "sent",
+              autentique_document_id: document.id ?? null,
+              signature_url: signatureUrl,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", generatedContract.id);
+
+          logs.push(await logStep(supabase, runId, step, "completed", "Contrato enviado para assinatura no Autentique.", {
+            contractId: generatedContract.id,
+            documentId: document.id ?? null,
+            signatureUrl,
+          }));
         } else if (step.id === "create_whatsapp_group") {
           const config = step.config ?? {};
           const participants = uniqueValues([
