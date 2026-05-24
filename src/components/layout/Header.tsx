@@ -61,15 +61,15 @@ export function Header() {
 
   return (
     <>
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/60 px-4 backdrop-blur-xl md:px-6">
+    <header className="sticky top-0 z-30 flex min-h-16 items-center gap-2 border-b border-border bg-background/60 px-3 backdrop-blur-xl sm:gap-3 sm:px-4 md:px-6">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Abrir menu">
-            <Menu className="h-5 w-5" />
+          <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Abrir menu de navegação">
+            <Menu className="h-5 w-5" aria-hidden="true" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-72 border-r border-border bg-sidebar/95 p-0">
-          <SheetTitle className="sr-only">Navegacao</SheetTitle>
+        <SheetContent side="left" className="w-[min(85vw,22rem)] border-r border-border bg-sidebar/95 p-0 sm:max-w-[22rem]">
+          <SheetTitle className="sr-only">Navegação principal</SheetTitle>
           <Sidebar onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
@@ -83,12 +83,12 @@ export function Header() {
         variant="ghost"
         size="icon"
         className="relative"
-        aria-label="Agente Operacional"
+        aria-label="Abrir Agente Operacional"
         onClick={() => setAgentOpen(true)}
       >
-        <Bot className="h-5 w-5" />
+        <Bot className="h-5 w-5" aria-hidden="true" />
         {hasActiveInsights && (
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accent" />
+          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accent" aria-hidden="true" />
         )}
       </Button>
 
@@ -96,16 +96,19 @@ export function Header() {
         variant="ghost"
         size="icon"
         className="relative"
-        aria-label="Notificacoes"
+        aria-label="Abrir notificações"
         onClick={() => toast("Voce tem 3 notificacoes novas")}
       >
-        <Bell className="h-5 w-5" />
-        <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" />
+        <Bell className="h-5 w-5" aria-hidden="true" />
+        <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
       </Button>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="rounded-full outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring">
+          <button
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-full outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            aria-label="Abrir menu da conta"
+          >
             <Avatar className="h-9 w-9 border border-border">
               <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground">
                 TF
@@ -113,7 +116,7 @@ export function Header() {
             </Avatar>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="w-[min(85vw,18rem)]">
           <DropdownMenuLabel>
             <div className="flex flex-col">
               <span className="text-sm">Usuario logado</span>
@@ -122,7 +125,7 @@ export function Header() {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleSignOut}>
-            <LogOut className="mr-2 h-4 w-4" />
+            <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
             Sair
           </DropdownMenuItem>
         </DropdownMenuContent>
