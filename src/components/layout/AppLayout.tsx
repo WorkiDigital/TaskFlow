@@ -32,23 +32,23 @@ export function AppLayout() {
 
   if (checking) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+      <div className="flex min-h-dvh items-center justify-center bg-background">
+        <Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden="true" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen w-full">
-      <div className="hidden lg:block lg:w-64 lg:shrink-0">
-        <div className="fixed inset-y-0 left-0 w-64">
+    <div className="flex min-h-dvh w-full">
+      <div className="hidden shrink-0 lg:block lg:w-[18vw] lg:max-w-[20rem] lg:min-w-[16rem]">
+        <div className="fixed inset-y-0 left-0 w-[18vw] max-w-[20rem] min-w-[16rem]">
           <Sidebar />
         </div>
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
         <Header />
-        <main className="flex-1 h-[calc(100vh-64px)] flex flex-col overflow-hidden">
-          <div className="w-full h-full animate-in fade-in duration-500 flex flex-col overflow-y-auto overflow-x-hidden">
+        <main className="flex h-[calc(100dvh-4rem)] flex-1 flex-col overflow-hidden">
+          <div className="flex h-full w-full animate-in flex-col overflow-y-auto overflow-x-hidden fade-in duration-500">
             <Outlet />
           </div>
         </main>
