@@ -112,6 +112,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
+import { SidebarProvider } from "@/contexts/SidebarContext";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
@@ -119,8 +120,10 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <WorkspaceProvider>
-        <Outlet />
-        <Toaster />
+        <SidebarProvider>
+          <Outlet />
+          <Toaster />
+        </SidebarProvider>
       </WorkspaceProvider>
     </QueryClientProvider>
   );

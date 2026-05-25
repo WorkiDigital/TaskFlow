@@ -555,7 +555,7 @@ function ProjectsWorkspace() {
             setAllTasks((prev) => prev.filter((t) => t.id !== task.id));
             toast.success("Tarefa excluída.");
           } catch (e) {
-            toast.error("Erro ao excluir tarefa: " + (e?.message || JSON.stringify(e)));
+            toast.error("Erro ao excluir tarefa: " + (e instanceof Error ? e.message : JSON.stringify(e)));
           }
         },
       });
@@ -944,7 +944,7 @@ function ProjectsWorkspace() {
                     onApplyTasks={async (tasks) => {
                       setLoadingData(true);
                       try {
-                        const newDbTasks = [];
+                        const newDbTasks: ReturnType<typeof mapDbToTask>[] = [];
                         for (const t of tasks) {
                           const created = await createProjectTask({
                             project_id: t.projectId,

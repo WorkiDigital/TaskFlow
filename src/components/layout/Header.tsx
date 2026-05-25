@@ -1,5 +1,5 @@
 import { useRouterState } from "@tanstack/react-router";
-import { Bell, Bot, LogOut, Menu } from "lucide-react";
+import { Bell, Bot, LogOut, Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -18,6 +18,7 @@ import { authService } from "@/services/authService";
 import { supabase } from "@/services/supabase";
 import { OperationalAgentPanel } from "@/components/agent/OperationalAgentPanel";
 import { agentService, type AgentContext } from "@/services/agentService";
+import { useSidebar } from "@/contexts/SidebarContext";
 
 function pathToAgentContext(path: string): AgentContext {
   if (path.startsWith("/projects")) return "projects";
@@ -36,6 +37,7 @@ export function Header() {
   const [agentOpen, setAgentOpen] = useState(false);
   const [hasActiveInsights, setHasActiveInsights] = useState(false);
   const agentContext = pathToAgentContext(currentPath);
+  const { isCollapsed, toggleCollapse } = useSidebar();
 
   useEffect(() => {
     void supabase.auth.getUser().then(({ data }) => {
@@ -77,6 +79,16 @@ export function Header() {
           </SheetContent>
         </Sheet>
 
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hidden lg:flex mr-1 text-muted-foreground hover:text-foreground"
+          onClick={toggleCollapse}
+          aria-label={isCollapsed ? "Expandir coluna lateral" : "Recolher coluna lateral"}
+        >
+          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </Button>
+
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-base font-semibold leading-tight md:text-lg">
             {current.label}
@@ -84,60 +96,6 @@ export function Header() {
           <p className="truncate text-xs text-muted-foreground">{current.subtitle}</p>
         </div>
 
-<<<<<<< HEAD
-      <Button
-        variant="ghost"
-        size="icon"
-        className="relative"
-        aria-label="Abrir Agente Operacional"
-        onClick={() => setAgentOpen(true)}
-      >
-        <Bot className="h-5 w-5" aria-hidden="true" />
-        {hasActiveInsights && (
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accent" aria-hidden="true" />
-        )}
-      </Button>
-
-      <Button
-        variant="ghost"
-        size="icon"
-        className="relative"
-        aria-label="Abrir notificações"
-        onClick={() => toast("Voce tem 3 notificacoes novas")}
-      >
-        <Bell className="h-5 w-5" aria-hidden="true" />
-        <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
-      </Button>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            className="flex min-h-11 min-w-11 items-center justify-center rounded-full outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            aria-label="Abrir menu da conta"
-          >
-            <Avatar className="h-9 w-9 border border-border">
-              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground">
-                TF
-              </AvatarFallback>
-            </Avatar>
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-[min(85vw,18rem)]">
-          <DropdownMenuLabel>
-            <div className="flex flex-col">
-              <span className="text-sm">Usuario logado</span>
-              <span className="text-xs text-muted-foreground">{email || "Sessao ativa"}</span>
-            </div>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleSignOut}>
-            <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
-            Sair
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </header>
-=======
         <Button
           variant="ghost"
           size="icon"
@@ -187,7 +145,6 @@ export function Header() {
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
->>>>>>> 1706d84 (feat: implement multiple workspaces architecture)
 
       <OperationalAgentPanel open={agentOpen} onOpenChange={setAgentOpen} context={agentContext} />
     </>

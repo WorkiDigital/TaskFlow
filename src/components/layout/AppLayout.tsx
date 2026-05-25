@@ -4,6 +4,8 @@ import { Loader2 } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { authService } from "@/services/authService";
+import { cn } from "@/lib/utils";
+import { useSidebar } from "@/contexts/SidebarContext";
 
 import { CreateWorkspaceDialog } from "@/components/workspaces/CreateWorkspaceDialog";
 import { WorkspaceSettingsDialog } from "@/components/workspaces/WorkspaceSettingsDialog";
@@ -11,6 +13,7 @@ import { WorkspaceSettingsDialog } from "@/components/workspaces/WorkspaceSettin
 export function AppLayout() {
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
+  const { isCollapsed } = useSidebar();
 
   useEffect(() => {
     let mounted = true;
@@ -44,8 +47,18 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-dvh w-full">
-      <div className="hidden shrink-0 lg:block lg:w-[18vw] lg:max-w-[20rem] lg:min-w-[16rem]">
-        <div className="fixed inset-y-0 left-0 w-[18vw] max-w-[20rem] min-w-[16rem]">
+      <div
+        className={cn(
+          "hidden shrink-0 lg:block transition-all duration-300 ease-in-out",
+          isCollapsed ? "lg:w-[72px]" : "lg:w-[18vw] lg:max-w-[20rem] lg:min-w-[16rem]"
+        )}
+      >
+        <div
+          className={cn(
+            "fixed inset-y-0 left-0 transition-all duration-300 ease-in-out",
+            isCollapsed ? "w-[72px]" : "w-[18vw] max-w-[20rem] min-w-[16rem]"
+          )}
+        >
           <Sidebar />
         </div>
       </div>
