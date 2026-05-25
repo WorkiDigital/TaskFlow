@@ -110,6 +110,67 @@
   --gradient-primary: linear-gradient(135deg, oklch(0.68 0.19 285), oklch(0.72 0.15 210));
 }
 
+.light {
+  /* Premium Light base */
+  --background: oklch(0.98 0.005 250);
+  --foreground: oklch(0.16 0.02 270);
+
+  --card: oklch(1 0 0 / 0.7);
+  --card-foreground: oklch(0.16 0.02 270);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.16 0.02 270);
+
+  --primary: oklch(0.60 0.18 285);
+  --primary-foreground: oklch(0.98 0.005 250);
+
+  --secondary: oklch(0.93 0.015 270 / 0.75);
+  --secondary-foreground: oklch(0.16 0.02 270);
+
+  --muted: oklch(0.95 0.01 270 / 0.6);
+  --muted-foreground: oklch(0.45 0.015 260);
+
+  --accent: oklch(0.55 0.14 210);
+  --accent-foreground: oklch(0.98 0.005 250);
+
+  --destructive: oklch(0.55 0.18 25);
+  --destructive-foreground: oklch(0.98 0.005 250);
+
+  --success: oklch(0.48 0.14 145);
+  --success-foreground: oklch(0.98 0.005 250);
+
+  --warning: oklch(0.65 0.13 80);
+  --warning-foreground: oklch(0.16 0.02 270);
+
+  --info: oklch(0.52 0.11 230);
+  --info-foreground: oklch(0.98 0.005 250);
+
+  --border: oklch(0.16 0.02 270 / 0.08);
+  --input: oklch(0.16 0.02 270 / 0.1);
+  --ring: oklch(0.55 0.14 210);
+
+  --sidebar: oklch(0.97 0.01 270 / 0.75);
+  --sidebar-foreground: oklch(0.16 0.02 270);
+  --sidebar-primary: oklch(0.60 0.18 285);
+  --sidebar-primary-foreground: oklch(0.98 0.005 250);
+  --sidebar-accent: oklch(0.93 0.015 270 / 0.75);
+  --sidebar-accent-foreground: oklch(0.16 0.02 270);
+  --sidebar-border: oklch(0.16 0.02 270 / 0.08);
+  --sidebar-ring: oklch(0.60 0.18 285);
+
+  /* Glassmorphism + gradient tokens for Light Mode */
+  --glass-bg: oklch(1 0 0 / 0.6);
+  --glass-border: oklch(0.16 0.02 270 / 0.08);
+  --glass-blur: 18px;
+  --shadow-soft: 0 10px 40px -10px oklch(0.16 0.02 270 / 0.08);
+  --shadow-glow: 0 0 60px -10px oklch(0.60 0.18 285 / 0.15);
+  --gradient-app:
+    radial-gradient(at 20% 10%, oklch(0.92 0.04 285 / 0.35) 0, transparent 50%),
+    radial-gradient(at 80% 0%, oklch(0.92 0.03 220 / 0.3) 0, transparent 50%),
+    radial-gradient(at 50% 100%, oklch(0.93 0.03 320 / 0.25) 0, transparent 60%);
+  --gradient-primary: linear-gradient(135deg, oklch(0.60 0.18 285), oklch(0.55 0.14 210));
+}
+
 @layer base {
   * {
     border-color: var(--color-border);

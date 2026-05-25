@@ -174,7 +174,7 @@ export async function createProjectColumn(input: CreateProjectColumnInput): Prom
 
   const { data, error } = await supabase
     .from("project_columns")
-    .insert([{ agency_id: userData!.agency_id, ...input }])
+    .insert([{ agency_id: userData!.agency_id, workspace_id: getLocalActiveWorkspaceId(), ...input }])
     .select()
     .single();
 
@@ -187,9 +187,11 @@ export async function seedDefaultColumns(projectId: string): Promise<DbProjectCo
   if (!user.user) throw new Error("Not authenticated");
   const { data: userData } = await supabase.from("users").select("agency_id").eq("id", user.user.id).single();
 
+  const workspaceId = getLocalActiveWorkspaceId();
+
   const { data, error } = await supabase
     .from("project_columns")
-    .insert(DEFAULT_COLUMNS.map((c) => ({ ...c, project_id: projectId, agency_id: userData!.agency_id })))
+    .insert(DEFAULT_COLUMNS.map((c) => ({ ...c, project_id: projectId, agency_id: userData!.agency_id, workspace_id: workspaceId })))
     .select();
 
   if (error) throw error;

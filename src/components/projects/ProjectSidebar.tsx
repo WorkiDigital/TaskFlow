@@ -153,6 +153,58 @@ export function ProjectSidebar({
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar p-2 space-y-4">
+        {/* Projects without a space (orphans) */}
+        {(() => {
+          const knownSpaceIds = new Set(spaces.map((s) => s.id));
+          const orphans = filteredProjects.filter((p) => !p.spaceId || !knownSpaceIds.has(p.spaceId));
+          if (orphans.length === 0) return null;
+          return (
+            <div className="space-y-0.5">
+              {orphans.map((project) => {
+                const isActive = activeViewMode === "project" && activeProjectId === project.id;
+                return (
+                  <div
+                    key={project.id}
+                    onClick={() => onProjectSelect(project.id)}
+                    className={cn(
+                      "relative w-full flex items-center justify-between gap-2 px-2 py-1.5 text-xs rounded-md transition-colors group/item cursor-pointer",
+                      isActive
+                        ? "bg-primary/30 text-white font-medium shadow-sm"
+                        : "text-muted-foreground hover:bg-white/5 hover:text-slate-200",
+                    )}
+                  >
+                    <div className="flex items-center gap-2 truncate flex-1">
+                      <Hash className={cn("w-3 h-3 shrink-0", isActive ? "text-primary-foreground/70" : "")} />
+                      <span className="truncate pr-12">{project.name}</span>
+                    </div>
+                    <div
+                      className="flex items-center gap-1 shrink-0 absolute right-2 opacity-40 group-hover/item:opacity-100 transition-opacity bg-background border border-white/10 rounded px-0.5 shadow-sm"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <DropdownMenu modal={false}>
+                        <DropdownMenuTrigger asChild>
+                          <button className="p-0.5 hover:bg-white/10 text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer">
+                            <MoreVertical className="w-3 h-3" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="glass-panel border-white/10 text-slate-200 w-36">
+                          <DropdownMenuItem
+                            onClick={() => onDeleteProject?.(project.id)}
+                            className="flex items-center gap-2 text-xs text-red-400 focus:bg-red-500/20 focus:text-red-300 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Excluir Lista</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+
         {spaces.map((space) => {
           const spaceProjects = filteredProjects.filter((p) => p.spaceId === space.id);
           if (query && spaceProjects.length === 0) return null;
@@ -367,7 +419,7 @@ export function ProjectSidebar({
         <button
           onClick={() => {
             if (spaces.length === 0) {
-              alert("Crie uma pasta primeiro antes de adicionar uma lista!");
+              handleCreateSpacePrompt();
               return;
             }
             handleAddProjectPrompt(spaces[0].id);

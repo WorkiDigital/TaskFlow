@@ -199,7 +199,7 @@ function ProjectsWorkspace() {
         projects.map(async (p: any) => {
           let cols: DbProjectColumn[] = (p.project_columns ?? []) as DbProjectColumn[];
           if (cols.length === 0) {
-            try { cols = await seedDefaultColumns(p.id); } catch { /* ignore */ }
+            try { cols = await seedDefaultColumns(p.id); } catch (e) { console.error("[loadAll] seed columns failed for", p.id, e); }
           }
           colMap[p.id] = cols.sort((a, b) => a.position - b.position);
         }),
@@ -630,6 +630,18 @@ function ProjectsWorkspace() {
     try {
       const created = await createProject({ space_id: spaceId, name });
       const newProject = mapDbToProject(created);
+
+      // Seed default columns for the new project
+      let cols: DbProjectColumn[] = [];
+      try {
+        cols = await seedDefaultColumns(created.id);
+        cols.sort((a, b) => a.position - b.position);
+      } catch (seedErr) {
+        console.error("[handleAddProject] erro ao criar colunas padrão:", seedErr);
+        toast.warning("Lista criada, mas colunas padrão não puderam ser geradas.");
+      }
+
+      setProjectColumns((prev) => ({ ...prev, [created.id]: cols }));
       setProjectsList((prev) => [...prev, newProject]);
       setActiveProjectId(newProject.id);
       setActiveViewMode("project");

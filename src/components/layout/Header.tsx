@@ -1,5 +1,5 @@
 import { useRouterState } from "@tanstack/react-router";
-import { Bell, Bot, LogOut, Menu, ChevronLeft, ChevronRight } from "lucide-react";
+import { Bell, Bot, LogOut, Menu, ChevronLeft, ChevronRight, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -19,6 +19,7 @@ import { supabase } from "@/services/supabase";
 import { OperationalAgentPanel } from "@/components/agent/OperationalAgentPanel";
 import { agentService, type AgentContext } from "@/services/agentService";
 import { useSidebar } from "@/contexts/SidebarContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 function pathToAgentContext(path: string): AgentContext {
   if (path.startsWith("/projects")) return "projects";
@@ -38,6 +39,7 @@ export function Header() {
   const [hasActiveInsights, setHasActiveInsights] = useState(false);
   const agentContext = pathToAgentContext(currentPath);
   const { isCollapsed, toggleCollapse } = useSidebar();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     void supabase.auth.getUser().then(({ data }) => {
@@ -95,6 +97,16 @@ export function Header() {
           </h1>
           <p className="truncate text-xs text-muted-foreground">{current.subtitle}</p>
         </div>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Alternar tema"
+          onClick={toggleTheme}
+          title={theme === "light" ? "Modo escuro" : "Modo claro"}
+        >
+          {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+        </Button>
 
         <Button
           variant="ghost"
