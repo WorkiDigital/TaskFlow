@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Folder,
   Plus,
@@ -24,6 +24,14 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
   getSpaceOverview,
@@ -56,6 +64,10 @@ export function SpaceOverview({
 }: SpaceOverviewProps) {
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [loading, setLoading] = useState(true);
+  const [newListDialogOpen, setNewListDialogOpen] = useState(false);
+  const [newListName, setNewListName] = useState("");
+  const [creatingList, setCreatingList] = useState(false);
+  const newListInputRef = useRef<HTMLInputElement>(null);
 
   // Data states
   const [overviewData, setOverviewData] = useState<any>(null);
@@ -106,16 +118,24 @@ export function SpaceOverview({
     loadSpaceData();
   }, [spaceId]);
 
-  const handleCreateList = async () => {
-    const name = window.prompt("Digite o nome da nova lista/projeto:");
-    if (!name || !name.trim()) return;
+  const handleCreateList = () => {
+    setNewListName("");
+    setNewListDialogOpen(true);
+    setTimeout(() => newListInputRef.current?.focus(), 50);
+  };
 
+  const handleCreateListConfirm = async () => {
+    if (!newListName.trim()) return;
+    setCreatingList(true);
     try {
-      await onAddProject(spaceId, name.trim());
+      await onAddProject(spaceId, newListName.trim());
       await loadSpaceData();
       onRefreshSidebar();
+      setNewListDialogOpen(false);
     } catch (e) {
       toast.error("Erro ao criar lista.");
+    } finally {
+      setCreatingList(false);
     }
   };
 
@@ -206,6 +226,7 @@ export function SpaceOverview({
   };
 
   return (
+    <>
     <div className="flex-1 flex flex-col min-w-0 bg-[var(--color-background)] overflow-hidden">
       {/* ─── HEADER DA PASTA ─── */}
       <div className="bg-black/20 shrink-0 border-b border-white/5">
@@ -915,5 +936,33 @@ export function SpaceOverview({
         </div>
       </div>
     </div>
+
+    <Dialog open={newListDialogOpen} onOpenChange={setNewListDialogOpen}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Nova Lista</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2 py-2">
+          <Label htmlFor="new-list-name">Nome da lista</Label>
+          <Input
+            id="new-list-name"
+            ref={newListInputRef}
+            placeholder="Ex: Sprint 01, Website, Campanha..."
+            value={newListName}
+            onChange={(e) => setNewListName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") void handleCreateListConfirm(); }}
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setNewListDialogOpen(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={() => void handleCreateListConfirm()} disabled={!newListName.trim() || creatingList}>
+            {creatingList ? "Criando..." : "Criar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
