@@ -1,6 +1,14 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Loader2, UserPlus, Sparkles, CheckCircle2, AlertTriangle, ArrowRight, LogIn } from "lucide-react";
+import {
+  Loader2,
+  UserPlus,
+  Sparkles,
+  CheckCircle2,
+  AlertTriangle,
+  ArrowRight,
+  LogIn,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +23,7 @@ export const Route = createFileRoute("/invite/$token")({
 function InviteAcceptPage() {
   const { token } = Route.useParams();
   const navigate = useNavigate();
-  
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [inviteDetails, setInviteDetails] = useState<{
@@ -90,8 +98,8 @@ function InviteAcceptPage() {
         const result = await authService.signUp(inviteDetails.email, password, {
           data: {
             invite_token: token,
-            full_name: fullName.trim()
-          }
+            full_name: fullName.trim(),
+          },
         });
 
         if (result.session) {
@@ -126,9 +134,7 @@ function InviteAcceptPage() {
             <AlertTriangle className="h-6 w-6" />
           </div>
           <h1 className="text-xl font-bold text-foreground">Convite Inválido</h1>
-          <p className="text-sm text-muted-foreground">
-            {error}
-          </p>
+          <p className="text-sm text-muted-foreground">{error}</p>
           <div className="pt-4 border-t border-border/50">
             <Button asChild className="w-full">
               <Link to="/login">Ir para o Login</Link>
@@ -149,8 +155,8 @@ function InviteAcceptPage() {
           <div className="space-y-2">
             <h1 className="text-2xl font-bold text-foreground">Cadastro Realizado!</h1>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Enviamos um e-mail de confirmação para <strong>{inviteDetails?.email}</strong>. 
-              Por favor, confirme seu e-mail para ativar sua conta e ingressar na agência.
+              Enviamos um e-mail de confirmação para <strong>{inviteDetails?.email}</strong>. Por
+              favor, confirme seu e-mail para ativar sua conta e ingressar na agência.
             </p>
           </div>
           <div className="pt-4 border-t border-border/50">
@@ -184,15 +190,19 @@ function InviteAcceptPage() {
             Convite Recebido
           </span>
           <h1 className="text-4xl font-semibold leading-tight text-foreground">
-            Você foi convidado para a equipe da <span className="text-primary font-bold">{inviteDetails?.agencyName}</span>!
+            Você foi convidado para a equipe da{" "}
+            <span className="text-primary font-bold">{inviteDetails?.agencyName}</span>!
           </h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            O TaskFlow é o centro operacional onde você poderá gerenciar suas tarefas diárias, 
-            ver cronogramas de projetos, colaborar com o time e manter a comunicação alinhada com o cliente.
+            O TaskFlow é o centro operacional onde você poderá gerenciar suas tarefas diárias, ver
+            cronogramas de projetos, colaborar com o time e manter a comunicação alinhada com o
+            cliente.
           </p>
         </div>
 
-        <p className="text-xs text-muted-foreground">Convite exclusivo &bull; Link expira em breve</p>
+        <p className="text-xs text-muted-foreground">
+          Convite exclusivo &bull; Link expira em breve
+        </p>
       </section>
 
       {/* Direita: Formulário de Cadastro/Login */}
@@ -216,11 +226,13 @@ function InviteAcceptPage() {
               </div>
               <h2 className="text-xl font-bold">Aceitar Convite</h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                Agência: <span className="font-semibold text-foreground">{inviteDetails?.agencyName}</span>
+                Agência:{" "}
+                <span className="font-semibold text-foreground">{inviteDetails?.agencyName}</span>
               </p>
               {inviteDetails?.job_title && (
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Cargo/Função: <span className="font-semibold text-primary">{inviteDetails?.job_title}</span>
+                  Cargo/Função:{" "}
+                  <span className="font-semibold text-primary">{inviteDetails?.job_title}</span>
                 </p>
               )}
             </div>
@@ -246,7 +258,7 @@ function InviteAcceptPage() {
                     required
                     placeholder="Ex: João Silva"
                     value={fullName}
-                    onChange={e => setFullName(e.target.value)}
+                    onChange={(e) => setFullName(e.target.value)}
                     disabled={submitting}
                   />
                 </div>
@@ -260,16 +272,22 @@ function InviteAcceptPage() {
                   required
                   placeholder="Mínimo 8 caracteres"
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={(e) => setPassword(e.target.value)}
                   disabled={submitting}
                 />
               </div>
 
               {!hasAccount && (
                 <div className="rounded-xl border border-border bg-white/5 p-3.5 text-xs text-muted-foreground space-y-1">
-                  <p className={password.length >= 8 ? "text-success font-medium" : ""}>&bull; Mínimo 8 caracteres</p>
-                  <p className={/[A-Z]/.test(password) ? "text-success font-medium" : ""}>&bull; Pelo menos uma letra maiúscula</p>
-                  <p className={/[a-z]/.test(password) ? "text-success font-medium" : ""}>&bull; Pelo menos uma letra minúscula</p>
+                  <p className={password.length >= 8 ? "text-success font-medium" : ""}>
+                    &bull; Mínimo 8 caracteres
+                  </p>
+                  <p className={/[A-Z]/.test(password) ? "text-success font-medium" : ""}>
+                    &bull; Pelo menos uma letra maiúscula
+                  </p>
+                  <p className={/[a-z]/.test(password) ? "text-success font-medium" : ""}>
+                    &bull; Pelo menos uma letra minúscula
+                  </p>
                 </div>
               )}
 
@@ -295,8 +313,8 @@ function InviteAcceptPage() {
                 className="text-xs text-primary hover:text-primary/80 font-medium"
                 disabled={submitting}
               >
-                {hasAccount 
-                  ? "Não tem conta? Cadastre-se por aqui" 
+                {hasAccount
+                  ? "Não tem conta? Cadastre-se por aqui"
                   : "Já possui uma conta no TaskFlow? Entre por aqui"}
               </button>
             </div>

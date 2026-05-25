@@ -11,14 +11,26 @@ import {
   Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { WorkspaceSwitcher } from "@/components/workspaces/WorkspaceSwitcher";
 
 export const navItems = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, subtitle: "Visão geral da agência" },
+  {
+    to: "/dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    subtitle: "Visão geral da agência",
+  },
   { to: "/clients", label: "Clientes", icon: Users, subtitle: "Sua carteira de clientes" },
   { to: "/onboarding", label: "Onboarding", icon: Rocket, subtitle: "Novos clientes em jornada" },
   { to: "/contracts", label: "Contratos", icon: FileText, subtitle: "Documentos e assinaturas" },
   { to: "/projects", label: "Projetos", icon: KanbanSquare, subtitle: "Entregas em andamento" },
-  { to: "/templates", label: "Templates", icon: Layers, subtitle: "Modelos operacionais de projeto" },
+  {
+    to: "/templates",
+    label: "Templates",
+    icon: Layers,
+    subtitle: "Modelos operacionais de projeto",
+  },
+  { to: "/automations", label: "Automacoes", icon: Workflow, subtitle: "Fluxos e execucoes" },
   { to: "/settings", label: "Configurações", icon: Settings, subtitle: "Sua agência e equipe" },
 ] as const;
 
@@ -45,6 +57,10 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           <p className="truncate text-xs text-muted-foreground">Plataforma SaaS</p>
         </div>
       </Link>
+
+      <div className="px-2">
+        <WorkspaceSwitcher />
+      </div>
 
       <nav className="flex flex-1 flex-col gap-1" aria-label="Navegação principal">
         {navItems.map((item) => {

@@ -23,14 +23,27 @@ export function OnboardingFlow({ onboarding }: OnboardingFlowProps) {
                   !isDone && !isActive && "border-border bg-background/30 text-muted-foreground",
                 )}
               >
-                {isDone ? <Check className="h-4 w-4" /> : isActive ? <Loader2 className="h-4 w-4 animate-spin" /> : <Circle className="h-3 w-3" />}
+                {isDone ? (
+                  <Check className="h-4 w-4" />
+                ) : isActive ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Circle className="h-3 w-3" />
+                )}
               </div>
-              <span className={cn("text-sm whitespace-nowrap", isActive ? "font-medium" : "text-muted-foreground")}>
+              <span
+                className={cn(
+                  "text-sm whitespace-nowrap",
+                  isActive ? "font-medium" : "text-muted-foreground",
+                )}
+              >
                 {step.label}
               </span>
             </div>
             {idx < onboarding.steps.length - 1 && (
-              <div className={cn("h-px flex-1 min-w-[16px]", isDone ? "bg-success/40" : "bg-border")} />
+              <div
+                className={cn("h-px flex-1 min-w-[16px]", isDone ? "bg-success/40" : "bg-border")}
+              />
             )}
           </div>
         );

@@ -22,8 +22,9 @@ function LoginPage() {
   useEffect(() => {
     let mounted = true;
 
-    authService.getSession()
-      .then(session => {
+    authService
+      .getSession()
+      .then((session) => {
         if (mounted && session) void navigate({ to: "/dashboard", replace: true });
       })
       .catch(() => {
@@ -98,12 +99,15 @@ function LoginPage() {
         </div>
 
         <div className="max-w-xl">
-          <p className="text-sm uppercase tracking-widest text-primary font-semibold">Acesso seguro</p>
+          <p className="text-sm uppercase tracking-widest text-primary font-semibold">
+            Acesso seguro
+          </p>
           <h1 className="mt-4 text-4xl font-semibold leading-tight">
             Controle seus clientes, contratos e onboarding em um painel protegido.
           </h1>
           <p className="mt-4 text-sm text-muted-foreground">
-            Entre com sua conta para acessar dados internos da agencia. Links publicos de formularios continuam liberados para clientes.
+            Entre com sua conta para acessar dados internos da agencia. Links publicos de
+            formularios continuam liberados para clientes.
           </p>
         </div>
 
@@ -131,7 +135,9 @@ function LoginPage() {
                 {mode === "login" ? "Entrar na plataforma" : "Criar acesso"}
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                {mode === "login" ? "Use seu e-mail e senha para continuar." : "Crie o primeiro usuario do painel."}
+                {mode === "login"
+                  ? "Use seu e-mail e senha para continuar."
+                  : "Crie o primeiro usuario do painel."}
               </p>
             </div>
 
@@ -143,7 +149,7 @@ function LoginPage() {
                   type="email"
                   autoComplete="email"
                   value={email}
-                  onChange={event => setEmail(event.target.value)}
+                  onChange={(event) => setEmail(event.target.value)}
                   disabled={loading}
                   placeholder="voce@agencia.com"
                 />
@@ -156,7 +162,7 @@ function LoginPage() {
                   type="password"
                   autoComplete={mode === "login" ? "current-password" : "new-password"}
                   value={password}
-                  onChange={event => setPassword(event.target.value)}
+                  onChange={(event) => setPassword(event.target.value)}
                   disabled={loading}
                   placeholder="Minimo 8 caracteres"
                 />
@@ -164,8 +170,12 @@ function LoginPage() {
 
               <div className="rounded-md border border-border bg-white/5 p-3 text-xs text-muted-foreground">
                 <p className={password.length >= 8 ? "text-success" : ""}>Minimo 8 caracteres</p>
-                <p className={/[A-Z]/.test(password) ? "text-success" : ""}>Pelo menos uma letra maiuscula</p>
-                <p className={/[a-z]/.test(password) ? "text-success" : ""}>Pelo menos uma letra minuscula</p>
+                <p className={/[A-Z]/.test(password) ? "text-success" : ""}>
+                  Pelo menos uma letra maiuscula
+                </p>
+                <p className={/[a-z]/.test(password) ? "text-success" : ""}>
+                  Pelo menos uma letra minuscula
+                </p>
               </div>
 
               <Button type="submit" className="w-full" disabled={loading}>

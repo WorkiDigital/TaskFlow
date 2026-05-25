@@ -1,34 +1,40 @@
-import { TaskPriority } from './mockProjects';
+import { TaskPriority } from "./mockProjects";
 
-export type TemplateStatus = 'active' | 'draft' | 'paused';
+export type TemplateStatus = "active" | "draft" | "paused";
 
-export type TemplateCategory = 
-  | 'paid_traffic' 
-  | 'social_media' 
-  | 'launch' 
-  | 'branding' 
-  | 'web_design' 
-  | 'creatives' 
-  | 'onboarding' 
-  | 'consulting' 
-  | 'custom';
+export type TemplateCategory =
+  | "paid_traffic"
+  | "social_media"
+  | "launch"
+  | "branding"
+  | "web_design"
+  | "creatives"
+  | "onboarding"
+  | "consulting"
+  | "custom";
 
-export type RelativeDateBase = 
-  | 'contract_signed_at' 
-  | 'project_start_date' 
-  | 'briefing_completed_at' 
-  | 'manual_date';
+export type RelativeDateBase =
+  | "contract_signed_at"
+  | "project_start_date"
+  | "briefing_completed_at"
+  | "manual_date";
 
 export interface AssigneeRule {
-  type: 'specific_user' | 'role' | 'client_owner' | 'project_manager' | 'first_available' | 'manual';
+  type:
+    | "specific_user"
+    | "role"
+    | "client_owner"
+    | "project_manager"
+    | "first_available"
+    | "manual";
   value?: string; // specific user ID or role name
-  fallback?: 'manager' | 'unassigned' | 'manual_review';
+  fallback?: "manager" | "unassigned" | "manual_review";
 }
 
 export interface RelativeDueDate {
   amount: number;
-  unit: 'days' | 'weeks' | 'months';
-  direction: 'after' | 'before';
+  unit: "days" | "weeks" | "months";
+  direction: "after" | "before";
   base: RelativeDateBase;
 }
 
@@ -61,7 +67,7 @@ export interface TemplateTask {
 
 export interface TemplateAutomation {
   enabled: boolean;
-  trigger: 'contract_signed' | 'briefing_completed' | 'client_created' | 'manual';
+  trigger: "contract_signed" | "briefing_completed" | "client_created" | "manual";
   createProject: boolean;
   createTasks: boolean;
   assignUsers: boolean;

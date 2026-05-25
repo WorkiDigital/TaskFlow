@@ -1,22 +1,31 @@
-import { AlertCircle, AlertTriangle, Lightbulb, XCircle, ChevronDown, ChevronUp, Wand2, X } from 'lucide-react';
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { StatusBadge } from '@/components/ui/StatusBadge';
-import { cn } from '@/lib/utils';
-import type { AgentInsight, InsightCategory, InsightPriority } from '@/services/agentService';
+import {
+  AlertCircle,
+  AlertTriangle,
+  Lightbulb,
+  XCircle,
+  ChevronDown,
+  ChevronUp,
+  Wand2,
+  X,
+} from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { cn } from "@/lib/utils";
+import type { AgentInsight, InsightCategory, InsightPriority } from "@/services/agentService";
 
-const priorityTone: Record<InsightPriority, 'danger' | 'warning' | 'info' | 'neutral'> = {
-  critical: 'danger',
-  high: 'warning',
-  medium: 'info',
-  low: 'neutral',
+const priorityTone: Record<InsightPriority, "danger" | "warning" | "info" | "neutral"> = {
+  critical: "danger",
+  high: "warning",
+  medium: "info",
+  low: "neutral",
 };
 
 const priorityLabel: Record<InsightPriority, string> = {
-  critical: 'Crítico',
-  high: 'Alto',
-  medium: 'Médio',
-  low: 'Baixo',
+  critical: "Crítico",
+  high: "Alto",
+  medium: "Médio",
+  low: "Baixo",
 };
 
 const categoryIcon: Record<InsightCategory, React.ElementType> = {
@@ -27,10 +36,10 @@ const categoryIcon: Record<InsightCategory, React.ElementType> = {
 };
 
 const categoryColor: Record<InsightCategory, string> = {
-  gap: 'text-warning',
-  issue: 'text-destructive',
-  opportunity: 'text-success',
-  warning: 'text-info',
+  gap: "text-warning",
+  issue: "text-destructive",
+  opportunity: "text-success",
+  warning: "text-info",
 };
 
 interface AgentInsightCardProps {
@@ -52,7 +61,7 @@ export function AgentInsightCard({
   return (
     <div className="glass-card p-4 transition-all duration-200 hover:border-white/15">
       <div className="flex items-start gap-3">
-        <Icon className={cn('h-4 w-4 mt-0.5 shrink-0', categoryColor[insight.category])} />
+        <Icon className={cn("h-4 w-4 mt-0.5 shrink-0", categoryColor[insight.category])} />
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -77,9 +86,15 @@ export function AgentInsightCard({
               onClick={() => setExpanded(!expanded)}
             >
               {expanded ? (
-                <><ChevronUp className="h-3 w-3 mr-1" />Menos</>
+                <>
+                  <ChevronUp className="h-3 w-3 mr-1" />
+                  Menos
+                </>
               ) : (
-                <><ChevronDown className="h-3 w-3 mr-1" />Detalhes</>
+                <>
+                  <ChevronDown className="h-3 w-3 mr-1" />
+                  Detalhes
+                </>
               )}
             </Button>
 

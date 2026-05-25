@@ -1,7 +1,14 @@
-export type ProjectStatus = 'planning' | 'active' | 'paused' | 'completed';
-export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type ProjectStatus = "planning" | "active" | "paused" | "completed";
+export type TaskPriority = "low" | "medium" | "high" | "urgent";
 // Fase 3: Expanded Statuses
-export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'review' | 'waiting' | 'approved' | 'done';
+export type TaskStatus =
+  | "backlog"
+  | "todo"
+  | "in_progress"
+  | "review"
+  | "waiting"
+  | "approved"
+  | "done";
 
 export interface Space {
   id: string;
@@ -76,20 +83,26 @@ export interface ProjectTask {
 }
 
 export const mockSpaces: Space[] = [
-  { id: 'sp-1', name: 'Marketing', color: 'bg-pink-500' },
-  { id: 'sp-2', name: 'Tráfego Pago', color: 'bg-blue-500' },
-  { id: 'sp-3', name: 'Design', color: 'bg-purple-500' },
-  { id: 'sp-4', name: 'Lançamentos', color: 'bg-orange-500' },
+  { id: "sp-1", name: "Marketing", color: "bg-pink-500" },
+  { id: "sp-2", name: "Tráfego Pago", color: "bg-blue-500" },
+  { id: "sp-3", name: "Design", color: "bg-purple-500" },
+  { id: "sp-4", name: "Lançamentos", color: "bg-orange-500" },
 ];
 
 export const mockProjectColumns: KanbanColumn[] = [
-  { id: 'col-1', status: 'backlog', title: 'Backlog', position: 1, color: 'bg-gray-500' },
-  { id: 'col-2', status: 'todo', title: 'Para fazer', position: 2, color: 'bg-slate-400' },
-  { id: 'col-3', status: 'in_progress', title: 'Em andamento', position: 3, color: 'bg-blue-500' },
-  { id: 'col-4', status: 'review', title: 'Em revisão', position: 4, color: 'bg-yellow-500' },
-  { id: 'col-5', status: 'waiting', title: 'Aguardando cliente', position: 5, color: 'bg-orange-500' },
-  { id: 'col-6', status: 'approved', title: 'Aprovado', position: 6, color: 'bg-emerald-500' },
-  { id: 'col-7', status: 'done', title: 'Finalizado', position: 7, color: 'bg-green-500' },
+  { id: "col-1", status: "backlog", title: "Backlog", position: 1, color: "bg-gray-500" },
+  { id: "col-2", status: "todo", title: "Para fazer", position: 2, color: "bg-slate-400" },
+  { id: "col-3", status: "in_progress", title: "Em andamento", position: 3, color: "bg-blue-500" },
+  { id: "col-4", status: "review", title: "Em revisão", position: 4, color: "bg-yellow-500" },
+  {
+    id: "col-5",
+    status: "waiting",
+    title: "Aguardando cliente",
+    position: 5,
+    color: "bg-orange-500",
+  },
+  { id: "col-6", status: "approved", title: "Aprovado", position: 6, color: "bg-emerald-500" },
+  { id: "col-7", status: "done", title: "Finalizado", position: 7, color: "bg-green-500" },
 ];
 
 export const mockProjectsList: Project[] = [
@@ -145,13 +158,22 @@ export const mockProjectTasks: ProjectTask[] = [
       { id: "chk-2", title: "Mapear objeções de compra", done: false },
     ],
     comments: [
-      { id: 'c-1', author: 'RT', content: 'As entrevistas começam amanhã.', timestamp: new Date(Date.now() - 86400000).toISOString() }
+      {
+        id: "c-1",
+        author: "RT",
+        content: "As entrevistas começam amanhã.",
+        timestamp: new Date(Date.now() - 86400000).toISOString(),
+      },
     ],
     activity: [
-      { id: 'a-1', description: 'MC moveu para Em andamento', timestamp: new Date(Date.now() - 186400000).toISOString() }
+      {
+        id: "a-1",
+        description: "MC moveu para Em andamento",
+        timestamp: new Date(Date.now() - 186400000).toISOString(),
+      },
     ],
     tags: ["Pesquisa", "Estratégia"],
-    customFields: { sprint: 'Sprint 01', complexity: 'Média' }
+    customFields: { sprint: "Sprint 01", complexity: "Média" },
   },
   {
     id: "t-2",
@@ -171,7 +193,7 @@ export const mockProjectTasks: ProjectTask[] = [
     comments: [],
     activity: [],
     tags: ["Design", "Web"],
-    customFields: { channel: 'Web', deliverableType: 'Página' }
+    customFields: { channel: "Web", deliverableType: "Página" },
   },
   {
     id: "t-3",
@@ -209,7 +231,7 @@ export const mockProjectTasks: ProjectTask[] = [
     comments: [],
     activity: [],
     tags: ["Ads", "Setup"],
-    customFields: { channel: 'Instagram Ads', sprint: 'Setup' }
+    customFields: { channel: "Instagram Ads", sprint: "Setup" },
   },
 ];
 
@@ -244,16 +266,18 @@ export const mockProjectDocs: ProjectDoc[] = [
     id: "doc-1",
     projectId: "p-1",
     title: "Estratégia Geral do Lançamento",
-    content: "# Planejamento do Lançamento Semanal\n\nEste documento detalha o funil de vendas completo, incluindo captação de leads via Meta Ads, e-mails de lembrete e página de obrigado com grupo de WhatsApp de super-aquecimento.\n\n## Objetivos\n- Meta de leads: 5.000 inscritos.\n- Custo por lead ideal: R$ 2,50.",
-    updatedAt: "2026-05-22T15:30:00.000Z"
+    content:
+      "# Planejamento do Lançamento Semanal\n\nEste documento detalha o funil de vendas completo, incluindo captação de leads via Meta Ads, e-mails de lembrete e página de obrigado com grupo de WhatsApp de super-aquecimento.\n\n## Objetivos\n- Meta de leads: 5.000 inscritos.\n- Custo por lead ideal: R$ 2,50.",
+    updatedAt: "2026-05-22T15:30:00.000Z",
   },
   {
     id: "doc-2",
     projectId: "p-1",
     title: "Roteiro dos Vídeos de CPL",
-    content: "## Roteiro CPL 1 - A Oportunidade\n\n- **Gancho Inicial (0-15s):** Revelar o maior segredo do mercado de agências.\n- **Conteúdo (15s-5m):** Mostrar como faturar 5 dígitos no piloto automático.\n- **Chamada de Ação (CTA):** Comentar na publicação ou preencher formulário.",
-    updatedAt: "2026-05-21T18:15:00.000Z"
-  }
+    content:
+      "## Roteiro CPL 1 - A Oportunidade\n\n- **Gancho Inicial (0-15s):** Revelar o maior segredo do mercado de agências.\n- **Conteúdo (15s-5m):** Mostrar como faturar 5 dígitos no piloto automático.\n- **Chamada de Ação (CTA):** Comentar na publicação ou preencher formulário.",
+    updatedAt: "2026-05-21T18:15:00.000Z",
+  },
 ];
 
 export const mockProjectFiles: ProjectFile[] = [
@@ -263,7 +287,7 @@ export const mockProjectFiles: ProjectFile[] = [
     name: "figma_layout_landing_page.fig",
     size: "15.4 MB",
     type: "figma",
-    uploadedAt: "2026-05-22T14:10:00.000Z"
+    uploadedAt: "2026-05-22T14:10:00.000Z",
   },
   {
     id: "file-2",
@@ -271,8 +295,8 @@ export const mockProjectFiles: ProjectFile[] = [
     name: "briefing_copys_trafego.pdf",
     size: "1.8 MB",
     type: "pdf",
-    uploadedAt: "2026-05-20T10:05:00.000Z"
-  }
+    uploadedAt: "2026-05-20T10:05:00.000Z",
+  },
 ];
 
 export const mockProjectActivities: ProjectActivity[] = [
@@ -282,7 +306,7 @@ export const mockProjectActivities: ProjectActivity[] = [
     user: "MC",
     action: "concluiu a tarefa",
     target: "Design da LP de Captura",
-    timestamp: "2026-05-22T17:00:00.000Z"
+    timestamp: "2026-05-22T17:00:00.000Z",
   },
   {
     id: "act-2",
@@ -290,7 +314,6 @@ export const mockProjectActivities: ProjectActivity[] = [
     user: "RT",
     action: "criou a tarefa",
     target: "Configurar automações de e-mail",
-    timestamp: "2026-05-21T11:20:00.000Z"
-  }
+    timestamp: "2026-05-21T11:20:00.000Z",
+  },
 ];
-

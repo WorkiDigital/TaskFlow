@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -134,7 +141,7 @@ export function ConfirmDialog({
               "font-medium text-xs h-8 px-4 cursor-pointer",
               isDestructive
                 ? "bg-red-500 hover:bg-red-600 text-white"
-                : "bg-primary hover:bg-primary/95 text-primary-foreground"
+                : "bg-primary hover:bg-primary/95 text-primary-foreground",
             )}
           >
             {confirmLabel}

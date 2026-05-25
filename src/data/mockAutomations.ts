@@ -1,54 +1,54 @@
 export type AutomationMode =
-  | 'complete'
-  | 'custom'
-  | 'whatsapp_only'
-  | 'contract_only'
-  | 'briefing_only'
-  | 'internal_notification_only'
+  | "complete"
+  | "custom"
+  | "whatsapp_only"
+  | "contract_only"
+  | "briefing_only"
+  | "internal_notification_only";
 
 export type AutomationStepType =
-  | 'send_contract_form'
-  | 'wait_contract_form'
-  | 'generate_contract'
-  | 'send_contract_signature'
-  | 'confirm_contract_sent_client_group'
-  | 'wait_contract_signed'
-  | 'create_client_whatsapp_group'
-  | 'select_internal_agency_group'
-  | 'add_group_participants'
-  | 'update_group_description'
-  | 'send_client_group_welcome'
-  | 'mention_group_participants'
-  | 'send_internal_agency_notification'
-  | 'send_briefing_form'
-  | 'wait_briefing_form'
-  | 'notify_briefing_received'
-  | 'finish_onboarding'
-  | 'apply_agency_template'
-  | 'create_recurring_task'
+  | "send_contract_form"
+  | "wait_contract_form"
+  | "generate_contract"
+  | "send_contract_signature"
+  | "confirm_contract_sent_client_group"
+  | "wait_contract_signed"
+  | "create_client_whatsapp_group"
+  | "select_internal_agency_group"
+  | "add_group_participants"
+  | "update_group_description"
+  | "send_client_group_welcome"
+  | "mention_group_participants"
+  | "send_internal_agency_notification"
+  | "send_briefing_form"
+  | "wait_briefing_form"
+  | "notify_briefing_received"
+  | "finish_onboarding"
+  | "apply_agency_template"
+  | "create_recurring_task";
 
 export interface AutomationStep {
-  id: string
-  type: AutomationStepType
-  name: string
-  description: string
-  enabled: boolean
-  order: number
-  configStatus: 'not_configured' | 'partial' | 'configured'
-  isAutomatic: boolean
-  dependsOn?: AutomationStepType[]
-  config?: any
+  id: string;
+  type: AutomationStepType;
+  name: string;
+  description: string;
+  enabled: boolean;
+  order: number;
+  configStatus: "not_configured" | "partial" | "configured";
+  isAutomatic: boolean;
+  dependsOn?: AutomationStepType[];
+  config?: any;
 }
 
 export interface AutomationFlow {
-  id: string
-  name: string
-  description?: string
-  mode: AutomationMode
-  status: 'active' | 'paused' | 'draft'
-  steps: AutomationStep[]
-  createdAt: string
-  updatedAt: string
+  id: string;
+  name: string;
+  description?: string;
+  mode: AutomationMode;
+  status: "active" | "paused" | "draft";
+  steps: AutomationStep[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Mock inicial
@@ -69,7 +69,7 @@ export const mockAutomationFlows: AutomationFlow[] = [
         enabled: true,
         order: 1,
         configStatus: "configured",
-        isAutomatic: true
+        isAutomatic: true,
       },
       {
         id: "step-2",
@@ -80,7 +80,7 @@ export const mockAutomationFlows: AutomationFlow[] = [
         order: 2,
         configStatus: "configured",
         isAutomatic: true,
-        dependsOn: ["send_contract_form"]
+        dependsOn: ["send_contract_form"],
       },
       {
         id: "step-3",
@@ -91,7 +91,7 @@ export const mockAutomationFlows: AutomationFlow[] = [
         order: 3,
         configStatus: "configured",
         isAutomatic: true,
-        dependsOn: ["wait_contract_form"]
+        dependsOn: ["wait_contract_form"],
       },
       {
         id: "step-4",
@@ -101,9 +101,9 @@ export const mockAutomationFlows: AutomationFlow[] = [
         enabled: true,
         order: 4,
         configStatus: "partial",
-        isAutomatic: true
-      }
-    ]
+        isAutomatic: true,
+      },
+    ],
   },
   {
     id: "auto-002",
@@ -112,6 +112,6 @@ export const mockAutomationFlows: AutomationFlow[] = [
     status: "draft",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    steps: []
-  }
+    steps: [],
+  },
 ];

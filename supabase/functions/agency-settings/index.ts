@@ -18,11 +18,49 @@ type AgencySettings = {
 };
 
 function createAdminClient() {
-  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
   return createClient(Deno.env.get("SUPABASE_URL") ?? "", supabaseKey, {
     global: { headers: { Authorization: `Bearer ${supabaseKey}` } },
   });
+}
+
+function getBearerToken(req: Request) {
+  const header = req.headers.get("authorization") ?? "";
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match?.[1] ?? "";
+}
+
+async function requireAuthenticatedUser(
+  req: Request,
+  supabaseClient: ReturnType<typeof createAdminClient>,
+) {
+  const token = getBearerToken(req);
+  if (!token) throw new Error("Nao autenticado.");
+
+  const { data: authData, error: authError } = await supabaseClient.auth.getUser(token);
+  if (authError || !authData.user) throw new Error("Sessao invalida.");
+
+  const { data: userRow, error: userError } = await supabaseClient
+    .from("users")
+    .select("id, role, agency_id")
+    .eq("id", authData.user.id)
+    .single<{ id: string; role: string; agency_id: string | null }>();
+
+  if (userError || !userRow) throw new Error("Usuario nao encontrado.");
+
+  return userRow;
+}
+
+async function requireSettingsAdmin(
+  req: Request,
+  supabaseClient: ReturnType<typeof createAdminClient>,
+) {
+  const userRow = await requireAuthenticatedUser(req, supabaseClient);
+  if (!["owner", "admin"].includes(userRow.role)) {
+    throw new Error("Permissao insuficiente para alterar configuracoes.");
+  }
+  return userRow;
 }
 
 function toPublicSettings(settings: AgencySettings | null) {
@@ -85,12 +123,14 @@ serve(async (req) => {
     const settings = await ensureSettings(supabaseClient);
 
     if (action === "get_public") {
+      await requireAuthenticatedUser(req, supabaseClient);
       return new Response(JSON.stringify(toPublicSettings(settings)), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (action === "update_autentique_token") {
+      await requireSettingsAdmin(req, supabaseClient);
       const { data, error } = await supabaseClient
         .from("agency_settings")
         .update({ autentique_token: String(token ?? "") })
@@ -106,6 +146,7 @@ serve(async (req) => {
     }
 
     if (action === "update_evolution_config") {
+      await requireSettingsAdmin(req, supabaseClient);
       if (!url || !apiKey) {
         throw new Error("Informe URL e API key da Evolution.");
       }
@@ -125,6 +166,7 @@ serve(async (req) => {
     }
 
     if (action === "update_ai_provider") {
+      await requireSettingsAdmin(req, supabaseClient);
       const validProviders = ["claude", "gpt", "gemini"];
       if (!provider || !validProviders.includes(String(provider))) {
         throw new Error("Provider inválido. Use: claude, gpt ou gemini.");
@@ -152,6 +194,7 @@ serve(async (req) => {
     }
 
     if (action === "get_ai_provider") {
+      await requireAuthenticatedUser(req, supabaseClient);
       return new Response(
         JSON.stringify({
           provider: settings.ai_provider ?? "claude",

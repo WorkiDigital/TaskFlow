@@ -1,5 +1,5 @@
-import { supabase } from './supabase';
-import type { OnboardingWorkspaceState } from '@/data/onboardingTypes';
+import { supabase } from "./supabase";
+import type { OnboardingWorkspaceState } from "@/data/onboardingTypes";
 
 type OnboardingWorkspaceRow = {
   id: string;
@@ -12,7 +12,7 @@ export type OnboardingRunLog = {
   run_id: string;
   step_id: string;
   step_name: string;
-  status: 'running' | 'completed' | 'failed' | 'skipped';
+  status: "running" | "completed" | "failed" | "skipped";
   message: string | null;
   metadata: Record<string, unknown>;
   created_at: string;
@@ -24,7 +24,10 @@ async function invoke<T>(functionName: string, body: Record<string, unknown>): P
   if (error) {
     const context = (error as { context?: unknown }).context;
     if (context instanceof Response) {
-      const payload = await context.json().catch(() => null) as { error?: string; message?: string } | null;
+      const payload = (await context.json().catch(() => null)) as {
+        error?: string;
+        message?: string;
+      } | null;
       throw new Error(payload?.error ?? payload?.message ?? error.message);
     }
 
@@ -40,9 +43,9 @@ async function invoke<T>(functionName: string, body: Record<string, unknown>): P
 export const onboardingService = {
   async getWorkspace(): Promise<OnboardingWorkspaceState | null> {
     const { data, error } = await supabase
-      .from('onboarding_workspace')
-      .select('id, state, updated_at')
-      .eq('id', 'default')
+      .from("onboarding_workspace")
+      .select("id, state, updated_at")
+      .eq("id", "default")
       .maybeSingle<OnboardingWorkspaceRow>();
 
     if (error) throw error;
@@ -50,23 +53,24 @@ export const onboardingService = {
   },
 
   async saveWorkspace(state: OnboardingWorkspaceState): Promise<void> {
-    const { error } = await supabase
-      .from('onboarding_workspace')
-      .upsert({
-        id: 'default',
-        state,
-        updated_at: new Date().toISOString(),
-      });
+    const { error } = await supabase.from("onboarding_workspace").upsert({
+      id: "default",
+      state,
+      updated_at: new Date().toISOString(),
+    });
 
     if (error) throw error;
   },
 
   async startRun(clientId: string) {
-    return invoke<{ runId: string; status: string; logs: OnboardingRunLog[] }>('onboarding-execute', {
-      action: 'start',
-      clientId,
-      appOrigin: window.location.origin,
-    });
+    return invoke<{ runId: string; status: string; logs: OnboardingRunLog[] }>(
+      "onboarding-execute",
+      {
+        action: "start",
+        clientId,
+        appOrigin: window.location.origin,
+      },
+    );
   },
 
   async submitPublicForm(input: {
@@ -74,18 +78,21 @@ export const onboardingService = {
     clientId: string | null;
     payload: Record<string, unknown>;
   }) {
-    return invoke<{ runId: string | null; status: string; logs: OnboardingRunLog[] }>('onboarding-execute', {
-      action: 'form_submitted',
-      appOrigin: window.location.origin,
-      ...input,
-    });
+    return invoke<{ runId: string | null; status: string; logs: OnboardingRunLog[] }>(
+      "onboarding-execute",
+      {
+        action: "form_submitted",
+        appOrigin: window.location.origin,
+        ...input,
+      },
+    );
   },
 
   async getLatestRuns(limit = 10) {
     const { data, error } = await supabase
-      .from('onboarding_runs')
-      .select('*')
-      .order('started_at', { ascending: false })
+      .from("onboarding_runs")
+      .select("*")
+      .order("started_at", { ascending: false })
       .limit(limit);
 
     if (error) throw error;

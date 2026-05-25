@@ -1,16 +1,23 @@
-import { useState } from 'react';
-import { TemplateTask, TemplateColumn, TemplateChecklistItem, AssigneeRule, RelativeDueDate, RelativeDateBase } from '@/data/templateTypes';
-import { TaskPriority } from '@/data/mockProjects';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { GlassCard } from '@/components/ui/GlassCard';
-import { StatusBadge } from '@/components/ui/StatusBadge';
-import { TemplateChecklistBuilder } from './TemplateChecklistBuilder';
-import { teamMembers } from '@/lib/mock-data';
-import { roleOptions } from '@/data/mockAgencyTemplates';
+import { useState } from "react";
+import {
+  TemplateTask,
+  TemplateColumn,
+  TemplateChecklistItem,
+  AssigneeRule,
+  RelativeDueDate,
+  RelativeDateBase,
+} from "@/data/templateTypes";
+import { TaskPriority } from "@/data/mockProjects";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { GlassCard } from "@/components/ui/GlassCard";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { TemplateChecklistBuilder } from "./TemplateChecklistBuilder";
+import { teamMembers } from "@/lib/mock-data";
+import { roleOptions } from "@/data/mockAgencyTemplates";
 import {
   Plus,
   Trash2,
@@ -24,9 +31,9 @@ import {
   Link as LinkIcon,
   AlertCircle,
   Clock,
-  ArrowRight
-} from 'lucide-react';
-import { toast } from 'sonner';
+  ArrowRight,
+} from "lucide-react";
+import { toast } from "sonner";
 
 interface TemplateTaskBuilderProps {
   tasks: TemplateTask[];
@@ -36,50 +43,50 @@ interface TemplateTaskBuilderProps {
 
 export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBuilderProps) {
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
-  const [activeColumnFilter, setActiveColumnFilter] = useState<string>('all');
+  const [activeColumnFilter, setActiveColumnFilter] = useState<string>("all");
 
   const handleAddTask = (columnId: string) => {
-    const defaultCol = columns.find(c => c.id === columnId) || columns[0];
+    const defaultCol = columns.find((c) => c.id === columnId) || columns[0];
     if (!defaultCol) {
-      toast.error('Crie uma coluna primeiro antes de adicionar tarefas!');
+      toast.error("Crie uma coluna primeiro antes de adicionar tarefas!");
       return;
     }
 
     const newTask: TemplateTask = {
       id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-      title: 'Nova Tarefa',
-      description: '',
+      title: "Nova Tarefa",
+      description: "",
       columnId: defaultCol.id,
-      priority: 'medium',
-      assigneeRule: { type: 'role', value: 'Gestor de projeto', fallback: 'manager' },
-      relativeDueDate: { amount: 3, unit: 'days', direction: 'after', base: 'contract_signed_at' },
+      priority: "medium",
+      assigneeRule: { type: "role", value: "Gestor de projeto", fallback: "manager" },
+      relativeDueDate: { amount: 3, unit: "days", direction: "after", base: "contract_signed_at" },
       checklist: [],
       dependencies: [],
       tags: [],
-      isClientVisible: false
+      isClientVisible: false,
     };
 
     onChange([...tasks, newTask]);
     setExpandedTaskId(newTask.id);
-    console.log('[TemplateTaskBuilder] Added task:', newTask.id);
+    console.log("[TemplateTaskBuilder] Added task:", newTask.id);
   };
 
   const handleUpdateTask = (id: string, patch: Partial<TemplateTask>) => {
-    onChange(tasks.map(t => t.id === id ? { ...t, ...patch } : t));
+    onChange(tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)));
   };
 
   const handleRemoveTask = (id: string) => {
     // Also remove from other tasks' dependencies
     const updated = tasks
-      .filter(t => t.id !== id)
-      .map(t => ({
+      .filter((t) => t.id !== id)
+      .map((t) => ({
         ...t,
-        dependencies: t.dependencies.filter(depId => depId !== id)
+        dependencies: t.dependencies.filter((depId) => depId !== id),
       }));
     onChange(updated);
     if (expandedTaskId === id) setExpandedTaskId(null);
-    console.log('[TemplateTaskBuilder] Removed task:', id);
-    toast.info('Tarefa removida.');
+    console.log("[TemplateTaskBuilder] Removed task:", id);
+    toast.info("Tarefa removida.");
   };
 
   const toggleExpand = (id: string) => {
@@ -89,34 +96,35 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
   // Helper for assigning rule labels
   const getAssigneeRuleLabel = (rule: AssigneeRule) => {
     switch (rule.type) {
-      case 'specific_user':
-        const member = teamMembers.find(m => m.initials === rule.value || m.id === rule.value);
-        return `Pessoa: ${member?.name || rule.value || 'Não selecionada'}`;
-      case 'role':
-        return `Cargo: ${rule.value || 'Qualquer'}`;
-      case 'client_owner':
-        return 'Resp. pelo Cliente';
-      case 'project_manager':
-        return 'Gestor do Projeto';
-      case 'first_available':
-        return 'Primeiro Disp. do Setor';
+      case "specific_user": {
+        const member = teamMembers.find((m) => m.initials === rule.value || m.id === rule.value);
+        return `Pessoa: ${member?.name || rule.value || "Não selecionada"}`;
+      }
+      case "role":
+        return `Cargo: ${rule.value || "Qualquer"}`;
+      case "client_owner":
+        return "Resp. pelo Cliente";
+      case "project_manager":
+        return "Gestor do Projeto";
+      case "first_available":
+        return "Primeiro Disp. do Setor";
       default:
-        return 'Manual';
+        return "Manual";
     }
   };
 
   // Helper for relative due date label
   const getRelativeDateLabel = (date: RelativeDueDate) => {
     const baseLabels: Record<RelativeDateBase, string> = {
-      contract_signed_at: 'assinatura',
-      project_start_date: 'início do projeto',
-      briefing_completed_at: 'briefing',
-      manual_date: 'data manual'
+      contract_signed_at: "assinatura",
+      project_start_date: "início do projeto",
+      briefing_completed_at: "briefing",
+      manual_date: "data manual",
     };
     const unitLabels = {
-      days: date.amount === 1 ? 'dia' : 'dias',
-      weeks: date.amount === 1 ? 'semana' : 'semanas',
-      months: date.amount === 1 ? 'mês' : 'meses'
+      days: date.amount === 1 ? "dia" : "dias",
+      weeks: date.amount === 1 ? "semana" : "semanas",
+      months: date.amount === 1 ? "mês" : "meses",
     };
     return `D+${date.amount} ${unitLabels[date.unit]} pós ${baseLabels[date.base]}`;
   };
@@ -126,10 +134,10 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
     if (taskId === depId) return true;
     if (visited.has(depId)) return false;
     visited.add(depId);
-    
-    const depTask = tasks.find(t => t.id === depId);
+
+    const depTask = tasks.find((t) => t.id === depId);
     if (!depTask) return false;
-    
+
     for (const subDepId of depTask.dependencies) {
       if (isCircular(taskId, subDepId, visited)) return true;
     }
@@ -146,7 +154,7 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
             Defina as entregas, prazos relativos e quem executará cada tarefa.
           </p>
         </div>
-        
+
         {/* Column filtering and adding */}
         <div className="flex flex-wrap gap-2 items-center">
           <span className="text-xs text-muted-foreground">Filtrar coluna:</span>
@@ -156,14 +164,18 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
             className="rounded-lg border border-border bg-background/50 px-2.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="all">Todas</option>
-            {columns.map(col => (
-              <option key={col.id} value={col.id}>{col.title}</option>
+            {columns.map((col) => (
+              <option key={col.id} value={col.id}>
+                {col.title}
+              </option>
             ))}
           </select>
           {columns.length > 0 && (
             <Button
               size="sm"
-              onClick={() => handleAddTask(activeColumnFilter !== 'all' ? activeColumnFilter : columns[0].id)}
+              onClick={() =>
+                handleAddTask(activeColumnFilter !== "all" ? activeColumnFilter : columns[0].id)
+              }
               className="gap-1 bg-primary text-primary-foreground text-xs h-8"
             >
               <Plus className="h-4.5 w-4.5" /> Adicionar Tarefa
@@ -174,15 +186,17 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
 
       {columns.length === 0 ? (
         <div className="p-8 text-center bg-background/25 border border-border/40 rounded-xl">
-          <p className="text-sm text-muted-foreground">Adicione colunas nas configurações de fluxo antes de criar tarefas.</p>
+          <p className="text-sm text-muted-foreground">
+            Adicione colunas nas configurações de fluxo antes de criar tarefas.
+          </p>
         </div>
       ) : (
         <div className="space-y-6">
           {/* Columns Grouping list */}
           {columns
-            .filter(col => activeColumnFilter === 'all' || col.id === activeColumnFilter)
-            .map(column => {
-              const columnTasks = tasks.filter(t => t.columnId === column.id);
+            .filter((col) => activeColumnFilter === "all" || col.id === activeColumnFilter)
+            .map((column) => {
+              const columnTasks = tasks.filter((t) => t.columnId === column.id);
 
               return (
                 <div key={column.id} className="space-y-3">
@@ -208,19 +222,30 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
                   {/* Tasks in this column */}
                   {columnTasks.length > 0 ? (
                     <div className="space-y-3">
-                      {columnTasks.map(task => {
+                      {columnTasks.map((task) => {
                         const isExpanded = expandedTaskId === task.id;
-                        const priorityTone = 
-                          task.priority === 'urgent' ? 'danger' :
-                          task.priority === 'high' ? 'warning' :
-                          task.priority === 'medium' ? 'primary' : 'neutral';
-                        const priorityLabel = 
-                          task.priority === 'urgent' ? 'Urgente' :
-                          task.priority === 'high' ? 'Alta' :
-                          task.priority === 'medium' ? 'Média' : 'Baixa';
+                        const priorityTone =
+                          task.priority === "urgent"
+                            ? "danger"
+                            : task.priority === "high"
+                              ? "warning"
+                              : task.priority === "medium"
+                                ? "primary"
+                                : "neutral";
+                        const priorityLabel =
+                          task.priority === "urgent"
+                            ? "Urgente"
+                            : task.priority === "high"
+                              ? "Alta"
+                              : task.priority === "medium"
+                                ? "Média"
+                                : "Baixa";
 
                         return (
-                          <GlassCard key={task.id} className={`p-0 overflow-hidden border border-border/40 transition-all ${isExpanded ? 'border-primary/40 ring-1 ring-primary/20' : 'hover:border-border/80'}`}>
+                          <GlassCard
+                            key={task.id}
+                            className={`p-0 overflow-hidden border border-border/40 transition-all ${isExpanded ? "border-primary/40 ring-1 ring-primary/20" : "hover:border-border/80"}`}
+                          >
                             {/* Card Header clickable to expand */}
                             <div
                               onClick={() => toggleExpand(task.id)}
@@ -228,7 +253,9 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
                             >
                               <div className="space-y-1">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <h5 className="font-medium text-sm text-foreground">{task.title || 'Sem título'}</h5>
+                                  <h5 className="font-medium text-sm text-foreground">
+                                    {task.title || "Sem título"}
+                                  </h5>
                                   <StatusBadge tone={priorityTone}>{priorityLabel}</StatusBadge>
                                   {task.isClientVisible ? (
                                     <span className="inline-flex items-center text-[10px] text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full gap-1">
@@ -240,7 +267,9 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-xs text-muted-foreground line-clamp-1">{task.description || 'Nenhuma descrição.'}</p>
+                                <p className="text-xs text-muted-foreground line-clamp-1">
+                                  {task.description || "Nenhuma descrição."}
+                                </p>
                               </div>
 
                               <div className="flex items-center gap-4 text-xs text-muted-foreground w-full md:w-auto justify-end">
@@ -263,7 +292,11 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
                                   </span>
                                 )}
                                 <div>
-                                  {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                  {isExpanded ? (
+                                    <ChevronUp className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4" />
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -278,7 +311,9 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
                                       <Label className="text-xs">Título da Tarefa</Label>
                                       <Input
                                         value={task.title}
-                                        onChange={(e) => handleUpdateTask(task.id, { title: e.target.value })}
+                                        onChange={(e) =>
+                                          handleUpdateTask(task.id, { title: e.target.value })
+                                        }
                                         className="h-8 text-sm mt-1"
                                       />
                                     </div>
@@ -287,7 +322,9 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
                                       <Label className="text-xs">Descrição</Label>
                                       <Textarea
                                         value={task.description}
-                                        onChange={(e) => handleUpdateTask(task.id, { description: e.target.value })}
+                                        onChange={(e) =>
+                                          handleUpdateTask(task.id, { description: e.target.value })
+                                        }
                                         placeholder="O que deve ser entregue..."
                                         className="text-sm mt-1 min-h-[4.5rem] resize-y"
                                       />
@@ -298,11 +335,15 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
                                         <Label className="text-xs">Coluna</Label>
                                         <select
                                           value={task.columnId}
-                                          onChange={(e) => handleUpdateTask(task.id, { columnId: e.target.value })}
+                                          onChange={(e) =>
+                                            handleUpdateTask(task.id, { columnId: e.target.value })
+                                          }
                                           className="w-full rounded-lg border border-border bg-background/50 px-2.5 py-1.5 text-xs text-foreground mt-1 focus:outline-none focus:ring-1 focus:ring-primary"
                                         >
-                                          {columns.map(col => (
-                                            <option key={col.id} value={col.id}>{col.title}</option>
+                                          {columns.map((col) => (
+                                            <option key={col.id} value={col.id}>
+                                              {col.title}
+                                            </option>
                                           ))}
                                         </select>
                                       </div>
@@ -311,7 +352,11 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
                                         <Label className="text-xs">Prioridade</Label>
                                         <select
                                           value={task.priority}
-                                          onChange={(e) => handleUpdateTask(task.id, { priority: e.target.value as TaskPriority })}
+                                          onChange={(e) =>
+                                            handleUpdateTask(task.id, {
+                                              priority: e.target.value as TaskPriority,
+                                            })
+                                          }
                                           className="w-full rounded-lg border border-border bg-background/50 px-2.5 py-1.5 text-xs text-foreground mt-1 focus:outline-none focus:ring-1 focus:ring-primary"
                                         >
                                           <option value="low">Baixa</option>
@@ -325,12 +370,18 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
                                     {/* Client visibility */}
                                     <div className="flex items-center justify-between p-2 rounded-lg bg-background/40 border border-border/30">
                                       <div className="flex flex-col">
-                                        <span className="text-xs font-medium">Visível para o cliente</span>
-                                        <span className="text-[10px] text-muted-foreground">Permite que o cliente visualize no painel dele.</span>
+                                        <span className="text-xs font-medium">
+                                          Visível para o cliente
+                                        </span>
+                                        <span className="text-[10px] text-muted-foreground">
+                                          Permite que o cliente visualize no painel dele.
+                                        </span>
                                       </div>
                                       <Switch
                                         checked={task.isClientVisible}
-                                        onCheckedChange={(checked) => handleUpdateTask(task.id, { isClientVisible: checked })}
+                                        onCheckedChange={(checked) =>
+                                          handleUpdateTask(task.id, { isClientVisible: checked })
+                                        }
                                       />
                                     </div>
                                   </div>
@@ -344,14 +395,25 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
                                       </Label>
                                       <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                          <Label className="text-[10px] text-muted-foreground">Tipo</Label>
+                                          <Label className="text-[10px] text-muted-foreground">
+                                            Tipo
+                                          </Label>
                                           <select
                                             value={task.assigneeRule.type}
                                             onChange={(e) => {
                                               const newType = e.target.value as any;
-                                              const defaultVal = newType === 'role' ? 'Gestor de projeto' : newType === 'specific_user' ? teamMembers[0].initials : undefined;
+                                              const defaultVal =
+                                                newType === "role"
+                                                  ? "Gestor de projeto"
+                                                  : newType === "specific_user"
+                                                    ? teamMembers[0].initials
+                                                    : undefined;
                                               handleUpdateTask(task.id, {
-                                                assigneeRule: { ...task.assigneeRule, type: newType, value: defaultVal }
+                                                assigneeRule: {
+                                                  ...task.assigneeRule,
+                                                  type: newType,
+                                                  value: defaultVal,
+                                                },
                                               });
                                             }}
                                             className="w-full rounded-lg border border-border bg-background/50 px-2.5 py-1 text-xs text-foreground mt-0.5 focus:outline-none focus:ring-1 focus:ring-primary"
@@ -359,42 +421,64 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
                                             <option value="role">Cargo / Função</option>
                                             <option value="specific_user">Pessoa Fixa</option>
                                             <option value="client_owner">Dono do Cliente</option>
-                                            <option value="project_manager">Gestor do Projeto</option>
-                                            <option value="first_available">Primeiro Disponível</option>
+                                            <option value="project_manager">
+                                              Gestor do Projeto
+                                            </option>
+                                            <option value="first_available">
+                                              Primeiro Disponível
+                                            </option>
                                             <option value="manual">Definir Manualmente</option>
                                           </select>
                                         </div>
 
                                         {/* Dynamic selector based on rule type */}
-                                        {task.assigneeRule.type === 'role' && (
+                                        {task.assigneeRule.type === "role" && (
                                           <div>
-                                            <Label className="text-[10px] text-muted-foreground">Cargo</Label>
+                                            <Label className="text-[10px] text-muted-foreground">
+                                              Cargo
+                                            </Label>
                                             <select
-                                              value={task.assigneeRule.value || ''}
-                                              onChange={(e) => handleUpdateTask(task.id, {
-                                                assigneeRule: { ...task.assigneeRule, value: e.target.value }
-                                              })}
+                                              value={task.assigneeRule.value || ""}
+                                              onChange={(e) =>
+                                                handleUpdateTask(task.id, {
+                                                  assigneeRule: {
+                                                    ...task.assigneeRule,
+                                                    value: e.target.value,
+                                                  },
+                                                })
+                                              }
                                               className="w-full rounded-lg border border-border bg-background/50 px-2.5 py-1 text-xs text-foreground mt-0.5 focus:outline-none focus:ring-1 focus:ring-primary"
                                             >
-                                              {roleOptions.map(role => (
-                                                <option key={role.value} value={role.value}>{role.label}</option>
+                                              {roleOptions.map((role) => (
+                                                <option key={role.value} value={role.value}>
+                                                  {role.label}
+                                                </option>
                                               ))}
                                             </select>
                                           </div>
                                         )}
 
-                                        {task.assigneeRule.type === 'specific_user' && (
+                                        {task.assigneeRule.type === "specific_user" && (
                                           <div>
-                                            <Label className="text-[10px] text-muted-foreground">Usuário</Label>
+                                            <Label className="text-[10px] text-muted-foreground">
+                                              Usuário
+                                            </Label>
                                             <select
-                                              value={task.assigneeRule.value || ''}
-                                              onChange={(e) => handleUpdateTask(task.id, {
-                                                assigneeRule: { ...task.assigneeRule, value: e.target.value }
-                                              })}
+                                              value={task.assigneeRule.value || ""}
+                                              onChange={(e) =>
+                                                handleUpdateTask(task.id, {
+                                                  assigneeRule: {
+                                                    ...task.assigneeRule,
+                                                    value: e.target.value,
+                                                  },
+                                                })
+                                              }
                                               className="w-full rounded-lg border border-border bg-background/50 px-2.5 py-1 text-xs text-foreground mt-0.5 focus:outline-none focus:ring-1 focus:ring-primary"
                                             >
-                                              {teamMembers.map(m => (
-                                                <option key={m.id} value={m.initials}>{m.name} ({m.initials})</option>
+                                              {teamMembers.map((m) => (
+                                                <option key={m.id} value={m.initials}>
+                                                  {m.name} ({m.initials})
+                                                </option>
                                               ))}
                                             </select>
                                           </div>
@@ -409,24 +493,38 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
                                       </Label>
                                       <div className="grid grid-cols-4 gap-2 items-end">
                                         <div className="col-span-1">
-                                          <Label className="text-[10px] text-muted-foreground">Qtd</Label>
+                                          <Label className="text-[10px] text-muted-foreground">
+                                            Qtd
+                                          </Label>
                                           <Input
                                             type="number"
                                             value={task.relativeDueDate.amount}
-                                            onChange={(e) => handleUpdateTask(task.id, {
-                                              relativeDueDate: { ...task.relativeDueDate, amount: parseInt(e.target.value) || 0 }
-                                            })}
+                                            onChange={(e) =>
+                                              handleUpdateTask(task.id, {
+                                                relativeDueDate: {
+                                                  ...task.relativeDueDate,
+                                                  amount: parseInt(e.target.value) || 0,
+                                                },
+                                              })
+                                            }
                                             className="h-7 text-xs"
                                             min="0"
                                           />
                                         </div>
                                         <div className="col-span-1.5">
-                                          <Label className="text-[10px] text-muted-foreground">Unidade</Label>
+                                          <Label className="text-[10px] text-muted-foreground">
+                                            Unidade
+                                          </Label>
                                           <select
                                             value={task.relativeDueDate.unit}
-                                            onChange={(e) => handleUpdateTask(task.id, {
-                                              relativeDueDate: { ...task.relativeDueDate, unit: e.target.value as any }
-                                            })}
+                                            onChange={(e) =>
+                                              handleUpdateTask(task.id, {
+                                                relativeDueDate: {
+                                                  ...task.relativeDueDate,
+                                                  unit: e.target.value as any,
+                                                },
+                                              })
+                                            }
                                             className="w-full rounded-lg border border-border bg-background/50 px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary h-7"
                                           >
                                             <option value="days">Dias</option>
@@ -435,12 +533,19 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
                                           </select>
                                         </div>
                                         <div className="col-span-1.5">
-                                          <Label className="text-[10px] text-muted-foreground">Após</Label>
+                                          <Label className="text-[10px] text-muted-foreground">
+                                            Após
+                                          </Label>
                                           <select
                                             value={task.relativeDueDate.base}
-                                            onChange={(e) => handleUpdateTask(task.id, {
-                                              relativeDueDate: { ...task.relativeDueDate, base: e.target.value as RelativeDateBase }
-                                            })}
+                                            onChange={(e) =>
+                                              handleUpdateTask(task.id, {
+                                                relativeDueDate: {
+                                                  ...task.relativeDueDate,
+                                                  base: e.target.value as RelativeDateBase,
+                                                },
+                                              })
+                                            }
                                             className="w-full rounded-lg border border-border bg-background/50 px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary h-7"
                                           >
                                             <option value="contract_signed_at">Assinatura</option>
@@ -457,19 +562,26 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
                                       <Label className="text-xs font-semibold flex items-center gap-1.5">
                                         <LinkIcon className="h-3.5 w-3.5" /> Depende de outra tarefa
                                       </Label>
-                                      {tasks.filter(t => t.id !== task.id).length > 0 ? (
+                                      {tasks.filter((t) => t.id !== task.id).length > 0 ? (
                                         <div className="max-h-24 overflow-y-auto border border-border/30 rounded-lg p-2 bg-background/20 space-y-1">
                                           {tasks
-                                            .filter(t => t.id !== task.id)
-                                            .map(otherTask => {
-                                              const isChecked = task.dependencies.includes(otherTask.id);
-                                              const willCauseCircular = isCircular(task.id, otherTask.id);
-                                              
+                                            .filter((t) => t.id !== task.id)
+                                            .map((otherTask) => {
+                                              const isChecked = task.dependencies.includes(
+                                                otherTask.id,
+                                              );
+                                              const willCauseCircular = isCircular(
+                                                task.id,
+                                                otherTask.id,
+                                              );
+
                                               return (
                                                 <label
                                                   key={otherTask.id}
                                                   className={`flex items-center gap-2 text-xs py-0.5 cursor-pointer ${
-                                                    willCauseCircular ? 'opacity-40 cursor-not-allowed text-destructive' : 'hover:text-foreground'
+                                                    willCauseCircular
+                                                      ? "opacity-40 cursor-not-allowed text-destructive"
+                                                      : "hover:text-foreground"
                                                   }`}
                                                 >
                                                   <input
@@ -479,19 +591,29 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
                                                     onChange={(e) => {
                                                       const dependencies = e.target.checked
                                                         ? [...task.dependencies, otherTask.id]
-                                                        : task.dependencies.filter(id => id !== otherTask.id);
+                                                        : task.dependencies.filter(
+                                                            (id) => id !== otherTask.id,
+                                                          );
                                                       handleUpdateTask(task.id, { dependencies });
                                                     }}
                                                     className="rounded border-border bg-background"
                                                   />
-                                                  <span className="truncate">{otherTask.title || 'Sem título'}</span>
-                                                  {willCauseCircular && <span title="Causa dependência circular!"><AlertCircle className="h-3 w-3 inline text-destructive" /></span>}
+                                                  <span className="truncate">
+                                                    {otherTask.title || "Sem título"}
+                                                  </span>
+                                                  {willCauseCircular && (
+                                                    <span title="Causa dependência circular!">
+                                                      <AlertCircle className="h-3 w-3 inline text-destructive" />
+                                                    </span>
+                                                  )}
                                                 </label>
                                               );
                                             })}
                                         </div>
                                       ) : (
-                                        <p className="text-[11px] text-muted-foreground italic">Nenhuma outra tarefa disponível para vincular.</p>
+                                        <p className="text-[11px] text-muted-foreground italic">
+                                          Nenhuma outra tarefa disponível para vincular.
+                                        </p>
                                       )}
                                     </div>
                                   </div>
@@ -501,7 +623,9 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
                                 <div className="border-t border-border/35 pt-4">
                                   <TemplateChecklistBuilder
                                     items={task.checklist}
-                                    onChange={(checklist) => handleUpdateTask(task.id, { checklist })}
+                                    onChange={(checklist) =>
+                                      handleUpdateTask(task.id, { checklist })
+                                    }
                                   />
                                 </div>
 
@@ -530,7 +654,9 @@ export function TemplateTaskBuilder({ tasks, columns, onChange }: TemplateTaskBu
                       })}
                     </div>
                   ) : (
-                    <p className="text-xs text-muted-foreground italic pl-5">Nenhuma tarefa nesta coluna.</p>
+                    <p className="text-xs text-muted-foreground italic pl-5">
+                      Nenhuma tarefa nesta coluna.
+                    </p>
                   )}
                 </div>
               );

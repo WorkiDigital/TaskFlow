@@ -1,13 +1,13 @@
-import { useState } from 'react';
-import { useTemplateWorkspace } from '@/hooks/useTemplateWorkspace';
-import { templateCategories, roleOptions } from '@/data/mockAgencyTemplates';
-import { AgencyTemplate, TemplateCategory, TemplateStatus } from '@/data/templateTypes';
-import { GlassCard } from '@/components/ui/GlassCard';
-import { StatusBadge } from '@/components/ui/StatusBadge';
-import { MetricCard } from '@/components/ui/MetricCard';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useState } from "react";
+import { useTemplateWorkspace } from "@/hooks/useTemplateWorkspace";
+import { templateCategories, roleOptions } from "@/data/mockAgencyTemplates";
+import { AgencyTemplate, TemplateCategory, TemplateStatus } from "@/data/templateTypes";
+import { GlassCard } from "@/components/ui/GlassCard";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { MetricCard } from "@/components/ui/MetricCard";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Layers,
   Plus,
@@ -29,25 +29,34 @@ import {
   FileCode2,
   Settings2,
   RefreshCw,
-  FolderSync
-} from 'lucide-react';
-import { TemplateEditor } from './TemplateEditor';
-import { TemplateApplySimulation } from './TemplateApplySimulation';
-import { mockAgencyTemplates } from '@/data/mockAgencyTemplates';
-import { toast } from 'sonner';
+  FolderSync,
+} from "lucide-react";
+import { TemplateEditor } from "./TemplateEditor";
+import { TemplateApplySimulation } from "./TemplateApplySimulation";
+import { mockAgencyTemplates } from "@/data/mockAgencyTemplates";
+import { toast } from "sonner";
 
 // Helper to get category icon
 export function getCategoryIcon(cat: TemplateCategory) {
   switch (cat) {
-    case 'paid_traffic': return TrendingUp;
-    case 'social_media': return Instagram;
-    case 'launch': return Rocket;
-    case 'branding': return Palette;
-    case 'web_design': return Globe;
-    case 'creatives': return Video;
-    case 'onboarding': return UserCheck;
-    case 'consulting': return Users;
-    default: return Sliders;
+    case "paid_traffic":
+      return TrendingUp;
+    case "social_media":
+      return Instagram;
+    case "launch":
+      return Rocket;
+    case "branding":
+      return Palette;
+    case "web_design":
+      return Globe;
+    case "creatives":
+      return Video;
+    case "onboarding":
+      return UserCheck;
+    case "consulting":
+      return Users;
+    default:
+      return Sliders;
   }
 }
 
@@ -58,57 +67,60 @@ export function AgencyTemplatesManager() {
     updateTemplate,
     deleteTemplate,
     duplicateTemplate,
-    isLoading
+    isLoading,
   } = useTemplateWorkspace();
 
-  const [activeView, setActiveView] = useState<'list' | 'edit' | 'simulate'>('list');
+  const [activeView, setActiveView] = useState<"list" | "edit" | "simulate">("list");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  
+
   // Search & Filter State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<TemplateCategory | 'all'>('all');
-  const [selectedStatus, setSelectedStatus] = useState<TemplateStatus | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<TemplateCategory | "all">("all");
+  const [selectedStatus, setSelectedStatus] = useState<TemplateStatus | "all">("all");
 
   // Metrics calculation
   const totalTemplates = templates.length;
-  const activeAutomations = templates.filter(t => t.automation.enabled && t.status === 'active').length;
-  const linkedContracts = templates.filter(t => t.linkedContractTitle).length;
+  const activeAutomations = templates.filter(
+    (t) => t.automation.enabled && t.status === "active",
+  ).length;
+  const linkedContracts = templates.filter((t) => t.linkedContractTitle).length;
   const totalTasks = templates.reduce((acc, t) => acc + t.tasks.length, 0);
 
   // Filter templates
-  const filteredTemplates = templates.filter(t => {
-    const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          t.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || t.category === selectedCategory;
-    const matchesStatus = selectedStatus === 'all' || t.status === selectedStatus;
+  const filteredTemplates = templates.filter((t) => {
+    const matchesSearch =
+      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === "all" || t.category === selectedCategory;
+    const matchesStatus = selectedStatus === "all" || t.status === selectedStatus;
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
   const handleEdit = (id: string) => {
-    console.log('[AgencyTemplates] Navigating to edit template:', id);
+    console.log("[AgencyTemplates] Navigating to edit template:", id);
     setSelectedTemplateId(id);
-    setActiveView('edit');
+    setActiveView("edit");
   };
 
   const handleCreateNew = () => {
-    console.log('[AgencyTemplates] Opening empty template editor');
+    console.log("[AgencyTemplates] Opening empty template editor");
     setSelectedTemplateId(null);
-    setActiveView('edit');
+    setActiveView("edit");
   };
 
   const handleSimulate = (id: string) => {
-    console.log('[AgencyTemplates] Running simulation for template:', id);
+    console.log("[AgencyTemplates] Running simulation for template:", id);
     setSelectedTemplateId(id);
-    setActiveView('simulate');
+    setActiveView("simulate");
   };
 
   const handleImportGallery = async () => {
     // Check which templates from mockAgencyTemplates are missing and import them
     let importedCount = 0;
-    
+
     // We must use a for...of loop to await the async calls properly
     for (const mockT of mockAgencyTemplates) {
-      const exists = templates.some(t => t.name === mockT.name);
+      const exists = templates.some((t) => t.name === mockT.name);
       if (!exists) {
         try {
           await createTemplate({
@@ -119,7 +131,7 @@ export function AgencyTemplatesManager() {
             columns: mockT.columns,
             tasks: mockT.tasks,
             automation: mockT.automation,
-            linkedContractTitle: mockT.linkedContractTitle
+            linkedContractTitle: mockT.linkedContractTitle,
           });
           importedCount++;
         } catch (e: any) {
@@ -132,35 +144,30 @@ export function AgencyTemplatesManager() {
     if (importedCount > 0) {
       toast.success(`${importedCount} modelos importados da galeria com sucesso!`);
     } else {
-      toast.info('Nenhum novo modelo para importar ou todos já existem.');
+      toast.info("Nenhum novo modelo para importar ou todos já existem.");
     }
   };
 
   const handleResetGallery = () => {
     // Reset localstorage templates to defaults
     try {
-      localStorage.setItem('taskflow_templates', JSON.stringify(mockAgencyTemplates));
+      localStorage.setItem("taskflow_templates", JSON.stringify(mockAgencyTemplates));
       window.location.reload();
-      toast.success('Modelos restaurados para o padrão de fábrica!');
+      toast.success("Modelos restaurados para o padrão de fábrica!");
     } catch (e) {
-      toast.error('Erro ao resetar galeria');
+      toast.error("Erro ao resetar galeria");
     }
   };
 
-  if (activeView === 'edit') {
-    return (
-      <TemplateEditor
-        templateId={selectedTemplateId}
-        onBack={() => setActiveView('list')}
-      />
-    );
+  if (activeView === "edit") {
+    return <TemplateEditor templateId={selectedTemplateId} onBack={() => setActiveView("list")} />;
   }
 
-  if (activeView === 'simulate') {
+  if (activeView === "simulate") {
     return (
       <TemplateApplySimulation
         templateId={selectedTemplateId}
-        onBack={() => setActiveView('list')}
+        onBack={() => setActiveView("list")}
       />
     );
   }
@@ -183,7 +190,8 @@ export function AgencyTemplatesManager() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Templates de Agência</h2>
           <p className="text-sm text-muted-foreground">
-            Crie modelos operacionais e crie projetos + tarefas automaticamente após a assinatura dos contratos.
+            Crie modelos operacionais e crie projetos + tarefas automaticamente após a assinatura
+            dos contratos.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -191,11 +199,20 @@ export function AgencyTemplatesManager() {
             <FolderSync className="h-4 w-4" />
             Importar Galeria
           </Button>
-          <Button variant="outline" size="sm" onClick={handleResetGallery} className="gap-2 text-muted-foreground hover:text-foreground">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleResetGallery}
+            className="gap-2 text-muted-foreground hover:text-foreground"
+          >
             <RefreshCw className="h-3.5 w-3.5" />
             Restaurar Padrão
           </Button>
-          <Button size="sm" onClick={handleCreateNew} className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-[var(--shadow-glow)]">
+          <Button
+            size="sm"
+            onClick={handleCreateNew}
+            className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-[var(--shadow-glow)]"
+          >
             <Plus className="h-4 w-4" />
             Novo Template
           </Button>
@@ -245,19 +262,21 @@ export function AgencyTemplatesManager() {
           {/* Category Select */}
           <select
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value as TemplateCategory | 'all')}
+            onChange={(e) => setSelectedCategory(e.target.value as TemplateCategory | "all")}
             className="rounded-lg border border-border bg-background/50 px-3 py-1.5 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="all">Todas Categorias</option>
-            {templateCategories.map(cat => (
-              <option key={cat.value} value={cat.value}>{cat.label}</option>
+            {templateCategories.map((cat) => (
+              <option key={cat.value} value={cat.value}>
+                {cat.label}
+              </option>
             ))}
           </select>
 
           {/* Status Select */}
           <select
             value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value as TemplateStatus | 'all')}
+            onChange={(e) => setSelectedStatus(e.target.value as TemplateStatus | "all")}
             className="rounded-lg border border-border bg-background/50 px-3 py-1.5 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="all">Todos Status</option>
@@ -273,35 +292,59 @@ export function AgencyTemplatesManager() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredTemplates.map((template) => {
             const CatIcon = getCategoryIcon(template.category);
-            const categoryData = templateCategories.find(c => c.value === template.category);
-            const statusTone = template.status === 'active' ? 'success' : template.status === 'draft' ? 'neutral' : 'warning';
-            const statusLabel = template.status === 'active' ? 'Ativo' : template.status === 'draft' ? 'Rascunho' : 'Pausado';
+            const categoryData = templateCategories.find((c) => c.value === template.category);
+            const statusTone =
+              template.status === "active"
+                ? "success"
+                : template.status === "draft"
+                  ? "neutral"
+                  : "warning";
+            const statusLabel =
+              template.status === "active"
+                ? "Ativo"
+                : template.status === "draft"
+                  ? "Rascunho"
+                  : "Pausado";
 
             return (
-              <GlassCard key={template.id} hover className="flex flex-col justify-between h-full group relative">
+              <GlassCard
+                key={template.id}
+                hover
+                className="flex flex-col justify-between h-full group relative"
+              >
                 <div>
                   {/* Category & Status Badges */}
                   <div className="flex items-center justify-between mb-4">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${categoryData?.color || 'text-muted-foreground bg-muted/10 border-border'}`}>
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${categoryData?.color || "text-muted-foreground bg-muted/10 border-border"}`}
+                    >
                       <CatIcon className="h-3 w-3" />
-                      {categoryData?.label || 'Outro'}
+                      {categoryData?.label || "Outro"}
                     </span>
                     <StatusBadge tone={statusTone}>{statusLabel}</StatusBadge>
                   </div>
 
                   {/* Title & Description */}
-                  <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">{template.name}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">{template.description}</p>
+                  <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                    {template.name}
+                  </h3>
+                  <p className="mt-2 text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
+                    {template.description}
+                  </p>
 
                   {/* Template Stats */}
                   <div className="mt-4 grid grid-cols-2 gap-2 py-3 border-y border-border/50 text-xs">
                     <div>
                       <span className="text-muted-foreground block">Fluxo Kanbans</span>
-                      <span className="font-semibold text-foreground">{template.columns.length} Colunas</span>
+                      <span className="font-semibold text-foreground">
+                        {template.columns.length} Colunas
+                      </span>
                     </div>
                     <div>
                       <span className="text-muted-foreground block">Estrutura</span>
-                      <span className="font-semibold text-foreground">{template.tasks.length} Tarefas</span>
+                      <span className="font-semibold text-foreground">
+                        {template.tasks.length} Tarefas
+                      </span>
                     </div>
                   </div>
 
@@ -319,7 +362,10 @@ export function AgencyTemplatesManager() {
                     )}
                     {template.linkedContractTitle && (
                       <p className="mt-1 text-[11px] text-muted-foreground/80 truncate">
-                        Vínculo: <strong className="text-foreground/90">{template.linkedContractTitle}</strong>
+                        Vínculo:{" "}
+                        <strong className="text-foreground/90">
+                          {template.linkedContractTitle}
+                        </strong>
                       </p>
                     )}
                   </div>
@@ -328,17 +374,39 @@ export function AgencyTemplatesManager() {
                 {/* Footer Actions */}
                 <div className="mt-6 pt-4 border-t border-border/50 flex items-center justify-between gap-2">
                   <div className="flex gap-1.5">
-                    <Button variant="outline" size="icon" onClick={() => handleEdit(template.id)} title="Editar" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleEdit(template.id)}
+                      title="Editar"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    >
                       <Edit3 className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="outline" size="icon" onClick={() => duplicateTemplate(template.id)} title="Duplicar" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => duplicateTemplate(template.id)}
+                      title="Duplicar"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    >
                       <Copy className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="outline" size="icon" onClick={() => deleteTemplate(template.id)} title="Excluir" className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => deleteTemplate(template.id)}
+                      title="Excluir"
+                      className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                  <Button size="sm" onClick={() => handleSimulate(template.id)} className="h-8 gap-1.5 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20">
+                  <Button
+                    size="sm"
+                    onClick={() => handleSimulate(template.id)}
+                    className="h-8 gap-1.5 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
+                  >
                     <Play className="h-3 w-3 fill-current" />
                     Simular
                     <ChevronRight className="h-3 w-3" />

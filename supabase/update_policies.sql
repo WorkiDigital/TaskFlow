@@ -1,9 +1,9 @@
--- Allow anonymous access for the MVP phase, especially because the Capture form is public.
--- agency_settings intentionally stays private because it stores integration secrets.
-CREATE POLICY "Enable all for anon" ON users FOR ALL TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "Enable all for anon" ON clients FOR ALL TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "Enable all for anon" ON contract_templates FOR ALL TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "Enable all for anon" ON contracts FOR ALL TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "Enable all for anon" ON projects FOR ALL TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "Enable all for anon" ON project_columns FOR ALL TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "Enable all for anon" ON tasks FOR ALL TO anon USING (true) WITH CHECK (true);
+-- Deprecated safety stub.
+--
+-- This file used to create permissive anon policies for the MVP. Do not use it
+-- to configure production access. RLS hardening now lives in:
+-- supabase/migrations/20260525160237_harden_rls_grants.sql
+
+SELECT
+  'Use the harden_rls_grants migration instead of enabling anonymous table access.'
+  AS notice;

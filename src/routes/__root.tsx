@@ -111,13 +111,17 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
-      <Toaster />
+      <WorkspaceProvider>
+        <Outlet />
+        <Toaster />
+      </WorkspaceProvider>
     </QueryClientProvider>
   );
 }

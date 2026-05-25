@@ -1,5 +1,12 @@
 export type ClientStatus = "active" | "onboarding" | "paused" | "churned";
-export type ContractStatus = "draft" | "pending" | "sent" | "signed" | "expired" | "cancelled" | "error";
+export type ContractStatus =
+  | "draft"
+  | "pending"
+  | "sent"
+  | "signed"
+  | "expired"
+  | "cancelled"
+  | "error";
 export type ProjectStatus = "backlog" | "in_progress" | "review" | "done";
 export type Priority = "low" | "medium" | "high";
 

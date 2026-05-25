@@ -1,5 +1,5 @@
-import { GlassCard } from '@/components/ui/GlassCard';
-import type { FC } from 'react';
+import { GlassCard } from "@/components/ui/GlassCard";
+import type { FC } from "react";
 
 /**
  * Renderiza uma pré‑visualização do contrato.

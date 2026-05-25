@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { 
-  WhatsAppInstance, 
-  WhatsAppGroup, 
-  mockInstance, 
-  mockCapabilities 
+import {
+  WhatsAppInstance,
+  WhatsAppGroup,
+  mockInstance,
+  mockCapabilities,
 } from "@/data/mockWhatsAppConnection";
 import { InstanceStatusCard } from "./InstanceStatusCard";
 import { QRCodeConnectionCard } from "./QRCodeConnectionCard";
@@ -27,7 +27,7 @@ export function WhatsAppConnectionPanel() {
 
   const saveStatus = (newInst: WhatsAppInstance) => {
     setInstance(newInst);
-    window.dispatchEvent(new Event('whatsapp_status_changed'));
+    window.dispatchEvent(new Event("whatsapp_status_changed"));
   };
 
   const handleConnect = async () => {
@@ -45,9 +45,13 @@ export function WhatsAppConnectionPanel() {
         status: connection.status,
         lastSyncAt: new Date().toISOString(),
       });
-      toast.success(connection.status === 'connected' ? "WhatsApp ja conectado!" : "QR Code gerado com sucesso!");
+      toast.success(
+        connection.status === "connected"
+          ? "WhatsApp ja conectado!"
+          : "QR Code gerado com sucesso!",
+      );
     } catch (error) {
-      saveStatus({ ...instance, status: 'error' });
+      saveStatus({ ...instance, status: "error" });
       toast.error(error instanceof Error ? error.message : "Nao foi possivel gerar o QR Code.");
     } finally {
       setIsLoading(false);
@@ -60,10 +64,12 @@ export function WhatsAppConnectionPanel() {
       await evolutionService.logout(instance.instanceName);
       setQrCode(undefined);
       setPairingCode(undefined);
-      saveStatus({ ...instance, status: 'disconnected', phoneNumber: "", lastSyncAt: undefined });
+      saveStatus({ ...instance, status: "disconnected", phoneNumber: "", lastSyncAt: undefined });
       toast.info("WhatsApp desconectado.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel desconectar o WhatsApp.");
+      toast.error(
+        error instanceof Error ? error.message : "Nao foi possivel desconectar o WhatsApp.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -74,14 +80,14 @@ export function WhatsAppConnectionPanel() {
     try {
       const currentInstance = await evolutionService.getStatus(instance.instanceName);
       saveStatus(currentInstance);
-      if (currentInstance.status === 'connected') {
+      if (currentInstance.status === "connected") {
         setQrCode(undefined);
         setPairingCode(undefined);
         const syncedGroups = await evolutionService.fetchGroups(currentInstance.instanceName);
         setGroups(syncedGroups);
       }
     } catch (error) {
-      saveStatus({ ...instance, status: 'error' });
+      saveStatus({ ...instance, status: "error" });
       toast.error(error instanceof Error ? error.message : "Nao foi possivel atualizar o status.");
     } finally {
       setIsLoading(false);
@@ -89,25 +95,27 @@ export function WhatsAppConnectionPanel() {
   };
 
   const handleSetDefaultInternal = (groupId: string) => {
-    setGroups(groups.map(g => ({
-      ...g,
-      isDefaultInternal: g.id === groupId
-    })));
+    setGroups(
+      groups.map((g) => ({
+        ...g,
+        isDefaultInternal: g.id === groupId,
+      })),
+    );
     toast.success("Grupo interno padrão atualizado!");
   };
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <InstanceStatusCard 
-          instance={instance} 
+        <InstanceStatusCard
+          instance={instance}
           onConnect={handleConnect}
           onDisconnect={handleDisconnect}
           onRefresh={handleRefresh}
           isLoading={isLoading}
         />
-        
-        <QRCodeConnectionCard 
+
+        <QRCodeConnectionCard
           status={instance.status}
           onGenerateQR={handleGenerateQR}
           isLoading={isLoading}
@@ -116,16 +124,16 @@ export function WhatsAppConnectionPanel() {
         />
       </div>
 
-      <WhatsAppCapabilitiesChecklist 
+      <WhatsAppCapabilitiesChecklist
         capabilities={mockCapabilities.map((capability) => ({
           ...capability,
-          status: instance.status === 'connected' ? 'available' : capability.status,
-        }))} 
-        connectionStatus={instance.status} 
+          status: instance.status === "connected" ? "available" : capability.status,
+        }))}
+        connectionStatus={instance.status}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ConnectedGroupsManager 
+        <ConnectedGroupsManager
           groups={groups}
           connectionStatus={instance.status}
           onSync={async () => {
@@ -135,16 +143,13 @@ export function WhatsAppConnectionPanel() {
           onSetDefaultInternal={handleSetDefaultInternal}
         />
 
-        <WhatsAppTestMessagePanel 
+        <WhatsAppTestMessagePanel
           connectionStatus={instance.status}
           instanceName={instance.instanceName}
         />
       </div>
 
-      <WhatsAppAutomationReadiness 
-        connectionStatus={instance.status}
-        groups={groups}
-      />
+      <WhatsAppAutomationReadiness connectionStatus={instance.status} groups={groups} />
     </div>
   );
 }

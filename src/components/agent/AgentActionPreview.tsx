@@ -1,16 +1,16 @@
-import { CheckCircle2, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import type { AgentAction, ActionType } from '@/services/agentService';
+import { CheckCircle2, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import type { AgentAction, ActionType } from "@/services/agentService";
 
 const actionTypeLabel: Record<ActionType, string> = {
-  create_task: 'Criar tarefa',
-  create_task_checklist: 'Criar checklist',
-  assign_task_owner: 'Atribuir responsável',
-  update_due_date: 'Definir prazo',
-  add_automation_step: 'Adicionar step de automação',
-  link_template_to_contract: 'Vincular template a contrato',
-  create_project_column: 'Criar coluna no projeto',
-  update_task_priority: 'Atualizar prioridade',
+  create_task: "Criar tarefa",
+  create_task_checklist: "Criar checklist",
+  assign_task_owner: "Atribuir responsável",
+  update_due_date: "Definir prazo",
+  add_automation_step: "Adicionar step de automação",
+  link_template_to_contract: "Vincular template a contrato",
+  create_project_column: "Criar coluna no projeto",
+  update_task_priority: "Atualizar prioridade",
 };
 
 interface AgentActionPreviewProps {
@@ -47,7 +47,7 @@ export function AgentActionPreview({
         </ul>
       </div>
 
-      {action.status === 'approved' && (
+      {action.status === "approved" && (
         <div className="rounded-lg border border-success/30 bg-success/10 p-3">
           <p className="text-xs text-success">
             Esta ação foi aprovada e está pronta para execução.
@@ -69,12 +69,15 @@ export function AgentActionPreview({
           size="sm"
           className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
           onClick={() => onConfirmExecute(action.id)}
-          disabled={isExecuting || action.status !== 'approved'}
+          disabled={isExecuting || action.status !== "approved"}
         >
           {isExecuting ? (
-            <><Loader2 className="h-3.5 w-3.5 animate-spin mr-2" />Executando...</>
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" />
+              Executando...
+            </>
           ) : (
-            'Aprovar e executar'
+            "Aprovar e executar"
           )}
         </Button>
       </div>

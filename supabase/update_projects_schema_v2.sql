@@ -67,10 +67,8 @@ ALTER TABLE task_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE task_activity ENABLE ROW LEVEL SECURITY;
 ALTER TABLE task_checklists ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Enable all for anon" ON spaces FOR ALL TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "Enable all for anon" ON task_comments FOR ALL TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "Enable all for anon" ON task_activity FOR ALL TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "Enable all for anon" ON task_checklists FOR ALL TO anon USING (true) WITH CHECK (true);
+-- Anonymous access is intentionally not enabled here. Production RLS hardening
+-- is managed by supabase/migrations/20260525160237_harden_rls_grants.sql.
 
 -- =====================================================================================
 -- SEED DATA (Opcional: Inserir os Espaços Padrões)

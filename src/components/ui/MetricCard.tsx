@@ -31,7 +31,12 @@ export function MetricCard({ label, value, icon: Icon, delta, tint = "primary" }
           <p className="text-sm text-muted-foreground">{label}</p>
           <p className="mt-2 text-3xl font-semibold tracking-tight">{value}</p>
         </div>
-        <div className={cn("rounded-xl border border-border bg-background/40 p-2.5", tints[tint].split(" ").pop())}>
+        <div
+          className={cn(
+            "rounded-xl border border-border bg-background/40 p-2.5",
+            tints[tint].split(" ").pop(),
+          )}
+        >
           <Icon className="h-5 w-5" />
         </div>
       </div>
@@ -42,7 +47,9 @@ export function MetricCard({ label, value, icon: Icon, delta, tint = "primary" }
           ) : (
             <ArrowDownRight className="h-3.5 w-3.5 text-destructive" />
           )}
-          <span className={delta.positive ? "text-success" : "text-destructive"}>{delta.value}</span>
+          <span className={delta.positive ? "text-success" : "text-destructive"}>
+            {delta.value}
+          </span>
           <span className="text-muted-foreground">vs. mês anterior</span>
         </div>
       )}

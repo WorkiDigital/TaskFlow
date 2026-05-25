@@ -8,6 +8,7 @@ import { ClientFormDialog } from "@/components/clients/ClientFormDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/services/supabase";
+import { getCurrentUserAgency } from "@/lib/auth";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/clients")({
@@ -22,39 +23,51 @@ function ClientsPage() {
 
   const loadClients = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('clients')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error(error);
-    } else {
-      // Map DB fields to what the frontend expects
-      const mapped = (data || []).map(c => ({
-        id: c.id,
-        name: c.name,
-        email: c.email || '',
-        company: c.name, // using name as company for now since we didn't add company to schema
-        status: 'active', // default status
-        mrr: 0,
-        createdAt: c.created_at,
-      }));
-      setClients(mapped);
+    try {
+      const { agencyId } = await getCurrentUserAgency();
+      const { data, error } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("agency_id", agencyId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error(error);
+        toast.error("Erro ao carregar clientes: " + error.message);
+      } else {
+        const mapped = (data || []).map((c) => ({
+          id: c.id,
+          name: c.name,
+          email: c.email || "",
+          company: c.address || c.name,
+          status: "active",
+          mrr: 0,
+          createdAt: c.created_at,
+        }));
+        setClients(mapped);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao carregar clientes.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleDeleteClient = async (id: string) => {
-    const confirm = window.confirm("Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.");
+    const confirm = window.confirm(
+      "Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.",
+    );
     if (!confirm) return;
 
     try {
+      const { agencyId } = await getCurrentUserAgency();
       const { error } = await supabase
-        .from('clients')
+        .from("clients")
         .delete()
-        .eq('id', id);
-        
+        .eq("id", id)
+        .eq("agency_id", agencyId);
+
       if (error) {
         toast.error("Erro ao excluir cliente: " + error.message);
       } else {

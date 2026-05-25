@@ -1,22 +1,22 @@
-import { Rocket, Workflow, FileText, Hash, MessageSquare, Play } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { cn } from '@/lib/utils';
-import { FlowsTab } from './FlowsTab';
-import { FormsTab } from './FormsTab';
-import { VariablesTab } from './VariablesTab';
-import { MessagesTab } from './MessagesTab';
-import { SimulationTab } from './SimulationTab';
-import { useOnboardingWorkspace } from '@/hooks/useOnboardingWorkspace';
+import { Rocket, Workflow, FileText, Hash, MessageSquare, Play } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
+import { FlowsTab } from "./FlowsTab";
+import { FormsTab } from "./FormsTab";
+import { VariablesTab } from "./VariablesTab";
+import { MessagesTab } from "./MessagesTab";
+import { SimulationTab } from "./SimulationTab";
+import { useOnboardingWorkspace } from "@/hooks/useOnboardingWorkspace";
 
 const TABS = [
-  { value: 'flows', label: 'Fluxos', icon: Workflow, short: 'Fluxos' },
-  { value: 'forms', label: 'Formulários', icon: FileText, short: 'Forms' },
-  { value: 'variables', label: 'Variáveis', icon: Hash, short: 'Vars' },
-  { value: 'messages', label: 'Mensagens', icon: MessageSquare, short: 'Msgs' },
-  { value: 'simulation', label: 'Simulação', icon: Play, short: 'Sim.' },
+  { value: "flows", label: "Fluxos", icon: Workflow, short: "Fluxos" },
+  { value: "forms", label: "Formulários", icon: FileText, short: "Forms" },
+  { value: "variables", label: "Variáveis", icon: Hash, short: "Vars" },
+  { value: "messages", label: "Mensagens", icon: MessageSquare, short: "Msgs" },
+  { value: "simulation", label: "Simulação", icon: Play, short: "Sim." },
 ] as const;
 
-type TabValue = typeof TABS[number]['value'];
+type TabValue = (typeof TABS)[number]["value"];
 
 export function OnboardingWorkspace() {
   const {
@@ -34,8 +34,8 @@ export function OnboardingWorkspace() {
     updateMessage,
   } = useOnboardingWorkspace();
 
-  const enabledSteps = state.flowSteps.filter(s => s.enabled).length;
-  const configuredSteps = state.flowSteps.filter(s => s.status === 'configured').length;
+  const enabledSteps = state.flowSteps.filter((s) => s.enabled).length;
+  const configuredSteps = state.flowSteps.filter((s) => s.status === "configured").length;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto w-full px-4 py-6 md:px-8 md:py-8">
@@ -50,21 +50,28 @@ export function OnboardingWorkspace() {
           </div>
           <p className="text-sm text-muted-foreground">
             Configure formulários, variáveis, mensagens e automações do fluxo de boas-vindas.
-            {isSyncing ? ' Sincronizando...' : ' Sincronizado com Supabase.'}
+            {isSyncing ? " Sincronizando..." : " Sincronizado com Supabase."}
           </p>
         </div>
 
         {/* Métricas rápidas do header */}
         <div className="flex gap-3 shrink-0">
           {[
-            { label: 'Etapas ativas', value: enabledSteps, of: state.flowSteps.length, color: 'text-primary' },
-            { label: 'Formulários', value: state.formTemplates.length, color: 'text-accent' },
-            { label: 'Variáveis', value: state.variables.length, color: 'text-success' },
-          ].map(m => (
+            {
+              label: "Etapas ativas",
+              value: enabledSteps,
+              of: state.flowSteps.length,
+              color: "text-primary",
+            },
+            { label: "Formulários", value: state.formTemplates.length, color: "text-accent" },
+            { label: "Variáveis", value: state.variables.length, color: "text-success" },
+          ].map((m) => (
             <div key={m.label} className="glass-card px-3 py-2 text-center min-w-[72px]">
-              <p className={cn('text-xl font-bold', m.color)}>
+              <p className={cn("text-xl font-bold", m.color)}>
                 {m.value}
-                {m.of !== undefined && <span className="text-xs text-muted-foreground font-normal">/{m.of}</span>}
+                {m.of !== undefined && (
+                  <span className="text-xs text-muted-foreground font-normal">/{m.of}</span>
+                )}
               </p>
               <p className="text-[10px] text-muted-foreground font-medium">{m.label}</p>
             </div>
@@ -77,16 +84,16 @@ export function OnboardingWorkspace() {
         {/* Tab List com scroll horizontal no mobile */}
         <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="glass-panel inline-flex min-w-max w-full sm:w-auto gap-0.5 h-11">
-            {TABS.map(tab => {
+            {TABS.map((tab) => {
               const Icon = tab.icon;
               return (
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
                   className={cn(
-                    'gap-2 h-9 px-4 text-sm font-medium transition-all',
-                    'data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow',
-                    'data-[state=inactive]:text-muted-foreground hover:text-foreground'
+                    "gap-2 h-9 px-4 text-sm font-medium transition-all",
+                    "data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow",
+                    "data-[state=inactive]:text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <Icon className="w-3.5 h-3.5 shrink-0" />
@@ -100,11 +107,7 @@ export function OnboardingWorkspace() {
 
         {/* ─── Aba: Fluxos ─────────────────────────────────────────────── */}
         <TabsContent value="flows">
-          <FlowsTab
-            steps={state.flowSteps}
-            onToggle={toggleStep}
-            onUpdate={updateStep}
-          />
+          <FlowsTab steps={state.flowSteps} onToggle={toggleStep} onUpdate={updateStep} />
         </TabsContent>
 
         {/* ─── Aba: Formulários ────────────────────────────────────────── */}

@@ -26,7 +26,7 @@ export function AIScopeGenerator({ projectId, onApplyTasks }: AIScopeGeneratorPr
 
   const handleGenerate = () => {
     if (!prompt.trim()) return;
-    
+
     setLoading(true);
     setGeneratedResult(null);
 
@@ -39,9 +39,10 @@ export function AIScopeGenerator({ projectId, onApplyTasks }: AIScopeGeneratorPr
           columnId: "col-1",
           status: "backlog",
           title: "Definir avatar da campanha",
-          description: "Gerado por IA: Pesquisa de mercado e definição das dores e desejos do público alvo.",
+          description:
+            "Gerado por IA: Pesquisa de mercado e definição das dores e desejos do público alvo.",
           assignee: "AI",
-          dueDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
+          dueDate: new Date(Date.now() + 86400000 * 2).toISOString().split("T")[0],
           priority: "high",
           checklist: [
             { id: "ai-c-1", title: "Entrevistar clientes", done: false },
@@ -49,7 +50,7 @@ export function AIScopeGenerator({ projectId, onApplyTasks }: AIScopeGeneratorPr
           ],
           tags: ["Estratégia"],
           comments: [],
-          activity: []
+          activity: [],
         },
         {
           id: `ai-2-${Date.now()}`,
@@ -59,7 +60,7 @@ export function AIScopeGenerator({ projectId, onApplyTasks }: AIScopeGeneratorPr
           title: "Criar página de captura",
           description: "Gerado por IA: Desenvolvimento da landing page de registro.",
           assignee: "AI",
-          dueDate: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0],
+          dueDate: new Date(Date.now() + 86400000 * 5).toISOString().split("T")[0],
           priority: "urgent",
           checklist: [
             { id: "ai-c-3", title: "Copy", done: false },
@@ -67,8 +68,8 @@ export function AIScopeGenerator({ projectId, onApplyTasks }: AIScopeGeneratorPr
           ],
           tags: ["Design", "Web"],
           comments: [],
-          activity: []
-        }
+          activity: [],
+        },
       ];
       setGeneratedResult(generatedTasks);
       setLoading(false);
@@ -89,7 +90,11 @@ export function AIScopeGenerator({ projectId, onApplyTasks }: AIScopeGeneratorPr
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 gap-2 bg-gradient-to-r from-primary/20 to-accent/20 border-primary/50 text-primary hover:bg-primary/30">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 gap-2 bg-gradient-to-r from-primary/20 to-accent/20 border-primary/50 text-primary hover:bg-primary/30"
+        >
           <Sparkles className="w-4 h-4" />
           <span className="hidden sm:inline">Gerar com IA</span>
         </Button>
@@ -101,29 +106,34 @@ export function AIScopeGenerator({ projectId, onApplyTasks }: AIScopeGeneratorPr
             Gerador de Escopo com IA
           </DialogTitle>
           <DialogDescription>
-            Descreva o objetivo do projeto e a IA criará automaticamente todas as tarefas, checklists e etapas.
+            Descreva o objetivo do projeto e a IA criará automaticamente todas as tarefas,
+            checklists e etapas.
           </DialogDescription>
         </DialogHeader>
 
         <div className="pt-4">
           {!generatedResult ? (
             <div className="space-y-3">
-              <Textarea 
+              <Textarea
                 placeholder="Ex: Criar estrutura para lançamento de infoproduto em 30 dias..."
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 className="bg-black/20 resize-none h-24 border-white/10"
                 disabled={loading}
               />
-              <Button 
-                onClick={handleGenerate} 
-                disabled={loading || !prompt.trim()} 
+              <Button
+                onClick={handleGenerate}
+                disabled={loading || !prompt.trim()}
                 className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
               >
                 {loading ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando estrutura...</>
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando estrutura...
+                  </>
                 ) : (
-                  <><Sparkles className="w-4 h-4 mr-2" /> Gerar Escopo</>
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" /> Gerar Escopo
+                  </>
                 )}
               </Button>
             </div>
@@ -135,17 +145,26 @@ export function AIScopeGenerator({ projectId, onApplyTasks }: AIScopeGeneratorPr
                     <ArrowRight className="w-3 h-3 mt-1 text-primary shrink-0" />
                     <div>
                       <p className="font-medium">{task.title}</p>
-                      <p className="text-xs text-muted-foreground">{task.checklist.length} itens no checklist</p>
+                      <p className="text-xs text-muted-foreground">
+                        {task.checklist.length} itens no checklist
+                      </p>
                     </div>
                   </div>
                 ))}
               </div>
-              
+
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setGeneratedResult(null)} className="flex-1">
+                <Button
+                  variant="outline"
+                  onClick={() => setGeneratedResult(null)}
+                  className="flex-1"
+                >
                   Descartar
                 </Button>
-                <Button onClick={handleApply} className="flex-1 bg-success hover:bg-success/90 text-success-foreground">
+                <Button
+                  onClick={handleApply}
+                  className="flex-1 bg-success hover:bg-success/90 text-success-foreground"
+                >
                   Aplicar ao Projeto
                 </Button>
               </div>

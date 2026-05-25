@@ -1,14 +1,34 @@
 import { ProjectTask, mockProjectColumns, TaskStatus } from "@/data/mockProjects";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { CheckCircle2, MoreHorizontal, Folder, Plus } from "lucide-react";
+import {
+  CheckCircle2,
+  MoreHorizontal,
+  Folder,
+  Plus,
+  Pencil,
+  Copy,
+  UserPlus,
+  Trash2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 interface ListViewProps {
   tasks: ProjectTask[];
   onTaskClick: (task: ProjectTask) => void;
   onAddTask?: (status: TaskStatus) => void;
+  onTaskAction?: (
+    action: "edit" | "duplicate" | "change_assignee" | "delete",
+    task: ProjectTask,
+  ) => void;
 }
 
 const priorityColors = {
@@ -25,7 +45,7 @@ const priorityLabels = {
   urgent: "Urgente",
 };
 
-export function ListView({ tasks, onTaskClick, onAddTask }: ListViewProps) {
+export function ListView({ tasks, onTaskClick, onAddTask, onTaskAction }: ListViewProps) {
   // If the project is completely empty, show a premium Empty State
   if (tasks.length === 0) {
     return (
@@ -33,9 +53,10 @@ export function ListView({ tasks, onTaskClick, onAddTask }: ListViewProps) {
         <Folder className="w-12 h-12 text-muted-foreground/30 mb-4 animate-pulse" />
         <h3 className="font-semibold text-base text-slate-200">Esta lista está vazia</h3>
         <p className="text-xs text-muted-foreground mt-1 mb-6 max-w-sm leading-relaxed">
-          Não existem tarefas criadas nesta lista (projeto). Comece a organizar suas entregas agora mesmo!
+          Não existem tarefas criadas nesta lista (projeto). Comece a organizar suas entregas agora
+          mesmo!
         </p>
-        <Button 
+        <Button
           onClick={() => onAddTask?.("todo")}
           className="h-8 text-xs font-semibold px-4 cursor-pointer"
         >
@@ -47,18 +68,18 @@ export function ListView({ tasks, onTaskClick, onAddTask }: ListViewProps) {
   }
 
   // Group tasks by status
-  const groupedTasks = mockProjectColumns.map(col => ({
+  const groupedTasks = mockProjectColumns.map((col) => ({
     ...col,
-    tasks: tasks.filter(t => t.status === col.status)
+    tasks: tasks.filter((t) => t.status === col.status),
   }));
 
   return (
     <div className="flex flex-col gap-6">
-      {groupedTasks.map(group => {
+      {groupedTasks.map((group) => {
         // In ClickUp style, we can show status headers even if they are empty, but to avoid visual clutter
         // we'll show populated ones AND at least the 'todo' group as a placeholder if everything else is empty.
         if (group.tasks.length === 0) return null;
-        
+
         return (
           <div key={group.id} className="space-y-2 animate-in fade-in-50 duration-300">
             {/* Group Header */}
@@ -70,7 +91,7 @@ export function ListView({ tasks, onTaskClick, onAddTask }: ListViewProps) {
                   {group.tasks.length}
                 </span>
               </div>
-              
+
               {onAddTask && (
                 <button
                   onClick={() => onAddTask(group.status)}
@@ -96,13 +117,13 @@ export function ListView({ tasks, onTaskClick, onAddTask }: ListViewProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {group.tasks.map(task => {
-                    const completedChecklist = task.checklist?.filter(c => c.done).length || 0;
+                  {group.tasks.map((task) => {
+                    const completedChecklist = task.checklist?.filter((c) => c.done).length || 0;
                     const totalChecklist = task.checklist?.length || 0;
 
                     return (
-                      <tr 
-                        key={task.id} 
+                      <tr
+                        key={task.id}
                         onClick={() => onTaskClick(task)}
                         className="group hover:bg-white/5 cursor-pointer transition-colors"
                       >
@@ -110,10 +131,16 @@ export function ListView({ tasks, onTaskClick, onAddTask }: ListViewProps) {
                           <div className="flex items-center gap-3">
                             <CheckCircle2 className="w-3.5 h-3.5 text-muted-foreground/30 group-hover:text-muted-foreground transition-colors shrink-0" />
                             <div>
-                              <p className="font-medium text-[13px] text-foreground line-clamp-1">{task.title}</p>
+                              <p className="font-medium text-[13px] text-foreground line-clamp-1">
+                                {task.title}
+                              </p>
                               {(totalChecklist > 0 || task.description) && (
                                 <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">
-                                  {totalChecklist > 0 && <span className="mr-2">{completedChecklist}/{totalChecklist} checks</span>}
+                                  {totalChecklist > 0 && (
+                                    <span className="mr-2">
+                                      {completedChecklist}/{totalChecklist} checks
+                                    </span>
+                                  )}
                                   {task.description && <span>{task.description}</span>}
                                 </p>
                               )}
@@ -123,40 +150,114 @@ export function ListView({ tasks, onTaskClick, onAddTask }: ListViewProps) {
                         <td className="py-1.5 px-3">
                           <div className="flex items-center gap-2">
                             <Avatar className="w-5 h-5">
-                              <AvatarFallback className="text-[9px] bg-primary/20">{task.assignee}</AvatarFallback>
+                              <AvatarFallback className="text-[9px] bg-primary/20">
+                                {task.assignee}
+                              </AvatarFallback>
                             </Avatar>
-                            <span className="text-[11px] text-muted-foreground">{task.assignee}</span>
+                            <span className="text-[11px] text-muted-foreground">
+                              {task.assignee}
+                            </span>
                           </div>
                         </td>
                         <td className="py-1.5 px-3">
-                          <Badge variant="outline" className={cn("text-[9px] uppercase font-semibold border-transparent px-1.5 py-0", priorityColors[task.priority])}>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[9px] uppercase font-semibold border-transparent px-1.5 py-0",
+                              priorityColors[task.priority],
+                            )}
+                          >
                             {priorityLabels[task.priority]}
                           </Badge>
                         </td>
                         <td className="py-1.5 px-3 whitespace-nowrap">
                           {task.dueDate ? (
-                            <span className={cn(
-                              "text-[11px] font-medium",
-                              new Date(task.dueDate) < new Date() ? 'text-red-400' : 'text-muted-foreground'
-                            )}>
-                              {new Date(task.dueDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                            <span
+                              className={cn(
+                                "text-[11px] font-medium",
+                                new Date(task.dueDate) < new Date()
+                                  ? "text-red-400"
+                                  : "text-muted-foreground",
+                              )}
+                            >
+                              {new Date(task.dueDate).toLocaleDateString("pt-BR", {
+                                day: "2-digit",
+                                month: "short",
+                              })}
                             </span>
-                          ) : <span className="text-muted-foreground">-</span>}
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </td>
                         <td className="py-1.5 px-3">
                           <div className="flex flex-wrap gap-1">
-                            {task.tags?.slice(0, 2).map(tag => (
-                              <Badge key={tag} variant="secondary" className="text-[9px] px-1.5 py-0 bg-white/5 text-muted-foreground">{tag}</Badge>
+                            {task.tags?.slice(0, 2).map((tag) => (
+                              <Badge
+                                key={tag}
+                                variant="secondary"
+                                className="text-[9px] px-1.5 py-0 bg-white/5 text-muted-foreground"
+                              >
+                                {tag}
+                              </Badge>
                             ))}
                             {(task.tags?.length || 0) > 2 && (
-                              <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-white/5 text-muted-foreground">+{task.tags.length - 2}</Badge>
+                              <Badge
+                                variant="secondary"
+                                className="text-[9px] px-1.5 py-0 bg-white/5 text-muted-foreground"
+                              >
+                                +{task.tags.length - 2}
+                              </Badge>
                             )}
                           </div>
                         </td>
                         <td className="py-1.5 px-3 text-right">
-                          <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100">
-                            <MoreHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                              >
+                                <MoreHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onTaskAction?.("edit", task);
+                                }}
+                              >
+                                <Pencil className="mr-2 h-4 w-4" /> Editar tarefa
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onTaskAction?.("change_assignee", task);
+                                }}
+                              >
+                                <UserPlus className="mr-2 h-4 w-4" /> Alterar responsável
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onTaskAction?.("duplicate", task);
+                                }}
+                              >
+                                <Copy className="mr-2 h-4 w-4" /> Duplicar tarefa
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onTaskAction?.("delete", task);
+                                }}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" /> Excluir tarefa
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     );

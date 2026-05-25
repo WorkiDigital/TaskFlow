@@ -1,11 +1,4 @@
-import type {
-  Activity,
-  Client,
-  Contract,
-  Deadline,
-  Onboarding,
-  ProjectTask,
-} from "./types";
+import type { Activity, Client, Contract, Deadline, Onboarding, ProjectTask } from "./types";
 
 export const dashboardMetrics = {
   activeClients: 0,

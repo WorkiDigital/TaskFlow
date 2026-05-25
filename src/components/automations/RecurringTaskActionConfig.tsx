@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 interface RecurringTaskActionConfigProps {
   initialConfig?: any;
@@ -9,17 +9,21 @@ interface RecurringTaskActionConfigProps {
   onCancel: () => void;
 }
 
-export function RecurringTaskActionConfig({ initialConfig, onSave, onCancel }: RecurringTaskActionConfigProps) {
+export function RecurringTaskActionConfig({
+  initialConfig,
+  onSave,
+  onCancel,
+}: RecurringTaskActionConfigProps) {
   const [config, setConfig] = useState({
-    title: '',
-    projectId: '', // Usually dynamic or selected globally
-    columnId: '',
-    assigneeId: '',
-    priority: 'medium',
-    frequency: 'weekly',
-    weekday: 'monday',
-    startDate: '',
-    ...initialConfig
+    title: "",
+    projectId: "", // Usually dynamic or selected globally
+    columnId: "",
+    assigneeId: "",
+    priority: "medium",
+    frequency: "weekly",
+    weekday: "monday",
+    startDate: "",
+    ...initialConfig,
   });
 
   const handleSave = () => {
@@ -30,14 +34,16 @@ export function RecurringTaskActionConfig({ initialConfig, onSave, onCancel }: R
     <div className="flex flex-col h-full bg-background">
       <div className="shrink-0 p-6 border-b border-white/5 bg-black/20">
         <h2 className="text-xl font-semibold tracking-tight">Criar Tarefa Recorrente</h2>
-        <p className="text-sm text-muted-foreground mt-1">Configura a criação automática de uma tarefa em intervalos definidos.</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Configura a criação automática de uma tarefa em intervalos definidos.
+        </p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Título da Tarefa *</Label>
-            <Input 
+            <Input
               value={config.title}
               onChange={(e) => setConfig({ ...config, title: e.target.value })}
               placeholder="Ex: Revisar campanhas ativas"
@@ -59,7 +65,7 @@ export function RecurringTaskActionConfig({ initialConfig, onSave, onCancel }: R
                 <option value="urgent">Urgente</option>
               </select>
             </div>
-            
+
             <div className="space-y-2">
               <Label>Frequência</Label>
               <select
@@ -75,7 +81,7 @@ export function RecurringTaskActionConfig({ initialConfig, onSave, onCancel }: R
             </div>
           </div>
 
-          {config.frequency === 'weekly' && (
+          {config.frequency === "weekly" && (
             <div className="space-y-2">
               <Label>Dia da Semana</Label>
               <select
@@ -97,8 +103,14 @@ export function RecurringTaskActionConfig({ initialConfig, onSave, onCancel }: R
       </div>
 
       <div className="shrink-0 p-6 border-t border-white/5 bg-black/20 flex items-center justify-between">
-        <Button variant="ghost" onClick={onCancel}>Cancelar</Button>
-        <Button onClick={handleSave} disabled={!config.title} className="bg-primary hover:bg-primary/90">
+        <Button variant="ghost" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button
+          onClick={handleSave}
+          disabled={!config.title}
+          className="bg-primary hover:bg-primary/90"
+        >
           Salvar Configuração
         </Button>
       </div>

@@ -1,30 +1,30 @@
-import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useState } from 'react';
-import { cn } from '@/lib/utils';
-import type { AgentExecutionLog as LogEntry } from '@/services/agentService';
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+import type { AgentExecutionLog as LogEntry } from "@/services/agentService";
 
 const eventColor: Record<string, string> = {
-  analyze_completed: 'text-success',
-  execute_completed: 'text-success',
-  action_suggested: 'text-primary',
-  action_approved: 'text-info',
-  analyze_failed: 'text-destructive',
-  execute_failed: 'text-destructive',
-  execute_started: 'text-muted-foreground',
-  analyze_started: 'text-muted-foreground',
-  action_dismissed: 'text-muted-foreground',
+  analyze_completed: "text-success",
+  execute_completed: "text-success",
+  action_suggested: "text-primary",
+  action_approved: "text-info",
+  analyze_failed: "text-destructive",
+  execute_failed: "text-destructive",
+  execute_started: "text-muted-foreground",
+  analyze_started: "text-muted-foreground",
+  action_dismissed: "text-muted-foreground",
 };
 
 const eventLabel: Record<string, string> = {
-  analyze_started: 'Análise iniciada',
-  analyze_completed: 'Análise concluída',
-  analyze_failed: 'Falha na análise',
-  action_suggested: 'Ação sugerida',
-  action_approved: 'Ação aprovada',
-  action_dismissed: 'Ação descartada',
-  execute_started: 'Execução iniciada',
-  execute_completed: 'Execução concluída',
-  execute_failed: 'Falha na execução',
+  analyze_started: "Análise iniciada",
+  analyze_completed: "Análise concluída",
+  analyze_failed: "Falha na análise",
+  action_suggested: "Ação sugerida",
+  action_approved: "Ação aprovada",
+  action_dismissed: "Ação descartada",
+  execute_started: "Execução iniciada",
+  execute_completed: "Execução concluída",
+  execute_failed: "Falha na execução",
 };
 
 interface AgentExecutionLogProps {
@@ -47,7 +47,9 @@ export function AgentExecutionLog({ logs, isLoading }: AgentExecutionLogProps) {
     return (
       <div className="flex flex-col items-center justify-center py-10 gap-2">
         <p className="text-sm text-muted-foreground">Nenhuma atividade registrada</p>
-        <p className="text-xs text-muted-foreground/60">Os logs aparecerão aqui após análises e execuções</p>
+        <p className="text-xs text-muted-foreground/60">
+          Os logs aparecerão aqui após análises e execuções
+        </p>
       </div>
     );
   }
@@ -61,18 +63,24 @@ export function AgentExecutionLog({ logs, isLoading }: AgentExecutionLogProps) {
           key={log.id}
           className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors"
         >
-          <div className="w-1.5 h-1.5 rounded-full bg-current mt-1.5 shrink-0 opacity-70"
-            style={{ color: 'inherit' }}
+          <div
+            className="w-1.5 h-1.5 rounded-full bg-current mt-1.5 shrink-0 opacity-70"
+            style={{ color: "inherit" }}
           />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className={cn('text-xs font-medium', eventColor[log.event_type] ?? 'text-muted-foreground')}>
+              <span
+                className={cn(
+                  "text-xs font-medium",
+                  eventColor[log.event_type] ?? "text-muted-foreground",
+                )}
+              >
                 {eventLabel[log.event_type] ?? log.event_type}
               </span>
               <span className="text-xs text-muted-foreground/50 ml-auto shrink-0">
-                {new Date(log.created_at).toLocaleTimeString('pt-BR', {
-                  hour: '2-digit',
-                  minute: '2-digit',
+                {new Date(log.created_at).toLocaleTimeString("pt-BR", {
+                  hour: "2-digit",
+                  minute: "2-digit",
                 })}
               </span>
             </div>
@@ -87,9 +95,15 @@ export function AgentExecutionLog({ logs, isLoading }: AgentExecutionLogProps) {
           onClick={() => setExpanded(!expanded)}
         >
           {expanded ? (
-            <><ChevronUp className="h-3 w-3" />Mostrar menos</>
+            <>
+              <ChevronUp className="h-3 w-3" />
+              Mostrar menos
+            </>
           ) : (
-            <><ChevronDown className="h-3 w-3" />Ver todos ({logs.length})</>
+            <>
+              <ChevronDown className="h-3 w-3" />
+              Ver todos ({logs.length})
+            </>
           )}
         </button>
       )}

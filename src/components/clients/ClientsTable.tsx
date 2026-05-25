@@ -10,7 +10,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
-const statusMap: Record<ClientStatus, { label: string; tone: Parameters<typeof StatusBadge>[0]["tone"] }> = {
+const statusMap: Record<
+  ClientStatus,
+  { label: string; tone: Parameters<typeof StatusBadge>[0]["tone"] }
+> = {
   active: { label: "Ativo", tone: "success" },
   onboarding: { label: "Onboarding", tone: "primary" },
   paused: { label: "Pausado", tone: "warning" },
@@ -18,10 +21,19 @@ const statusMap: Record<ClientStatus, { label: string; tone: Parameters<typeof S
 };
 
 const fmt = (n: number) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    maximumFractionDigits: 0,
+  }).format(n);
 
-export function ClientsTable({ clients, onDelete }: { clients: Client[]; onDelete: (id: string) => void }) {
-
+export function ClientsTable({
+  clients,
+  onDelete,
+}: {
+  clients: Client[];
+  onDelete: (id: string) => void;
+}) {
   const copyLink = (clientId: string) => {
     const url = `${window.location.origin}/capture/${clientId}`;
     navigator.clipboard.writeText(url);
@@ -53,9 +65,13 @@ export function ClientsTable({ clients, onDelete }: { clients: Client[]; onDelet
                     <div className="text-xs text-muted-foreground">{c.email}</div>
                   </td>
                   <td className="px-4 py-3">{c.company}</td>
-                  <td className="px-4 py-3"><StatusBadge tone={s.tone}>{s.label}</StatusBadge></td>
+                  <td className="px-4 py-3">
+                    <StatusBadge tone={s.tone}>{s.label}</StatusBadge>
+                  </td>
                   <td className="px-4 py-3">{c.mrr > 0 ? fmt(c.mrr) : "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{new Date(c.createdAt).toLocaleDateString("pt-BR")}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {new Date(c.createdAt).toLocaleDateString("pt-BR")}
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -68,8 +84,8 @@ export function ClientsTable({ clients, onDelete }: { clients: Client[]; onDelet
                           <Copy className="mr-2 h-4 w-4" />
                           Copiar Link Captação
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => onDelete(c.id)} 
+                        <DropdownMenuItem
+                          onClick={() => onDelete(c.id)}
                           className="cursor-pointer text-red-400 focus:bg-red-500/20 focus:text-red-300"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
@@ -103,8 +119,8 @@ export function ClientsTable({ clients, onDelete }: { clients: Client[]; onDelet
                       <Copy className="mr-2 h-4 w-4" />
                       Copiar Link Captação
                     </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => onDelete(c.id)} 
+                    <DropdownMenuItem
+                      onClick={() => onDelete(c.id)}
                       className="cursor-pointer text-red-400 focus:bg-red-500/20 focus:text-red-300"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />

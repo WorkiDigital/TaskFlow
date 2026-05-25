@@ -4,9 +4,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog';
-import { AgentActionPreview } from './AgentActionPreview';
-import type { AgentAction } from '@/services/agentService';
+} from "@/components/ui/dialog";
+import { AgentActionPreview } from "./AgentActionPreview";
+import type { AgentAction } from "@/services/agentService";
 
 interface AgentApprovalDialogProps {
   action: AgentAction | null;

@@ -1,13 +1,13 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { 
-  getTemplates, 
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import {
+  getTemplates,
   createTemplate as apiCreateTemplate,
   updateTemplate as apiUpdateTemplate,
   deleteTemplate as apiDeleteTemplate,
-  duplicateTemplate as apiDuplicateTemplate
-} from '@/services/templatesService';
-import { supabase } from '@/services/supabase';
+  duplicateTemplate as apiDuplicateTemplate,
+} from "@/services/templatesService";
+import { supabase } from "@/services/supabase";
 
 // Helper to map backend data to frontend types (or just expose backend types if possible)
 // For now we will keep the hook interface similar but backed by Supabase.
@@ -16,15 +16,15 @@ export function useTemplateWorkspace() {
   const queryClient = useQueryClient();
 
   const { data: rawTemplates = [], isLoading } = useQuery({
-    queryKey: ['agency_templates'],
-    queryFn: getTemplates
+    queryKey: ["agency_templates"],
+    queryFn: getTemplates,
   });
 
   // Map backend format to frontend format for compatibility while we transition
-  const templates = rawTemplates.map(t => ({
+  const templates = rawTemplates.map((t) => ({
     id: t.id,
     name: t.name,
-    description: t.description || '',
+    description: t.description || "",
     category: t.category,
     status: t.status,
     linkedContractTitle: t.linked_contract_template_id, // we might need a join for title
@@ -38,30 +38,39 @@ export function useTemplateWorkspace() {
       notifyInternalGroup: true,
       requireManualReview: false,
     },
-    columns: (t.template_columns || []).map((c: any) => ({
-      id: c.id,
-      title: c.title,
-      position: c.position,
-      color: c.color,
-      isFinalColumn: c.is_final_column
-    })).sort((a: any, b: any) => a.position - b.position),
+    columns: (t.template_columns || [])
+      .map((c: any) => ({
+        id: c.id,
+        title: c.title,
+        position: c.position,
+        color: c.color,
+        isFinalColumn: c.is_final_column,
+      }))
+      .sort((a: any, b: any) => a.position - b.position),
     tasks: (t.template_tasks || []).map((tk: any) => ({
       id: tk.id,
       title: tk.title,
-      description: tk.description || '',
+      description: tk.description || "",
       columnId: tk.template_column_id,
       priority: tk.priority,
-      assigneeRule: tk.assignee_rule || { type: 'manual' },
-      relativeDueDate: tk.relative_due_date || { amount: 0, unit: 'days', direction: 'after', base: 'contract_signed_at' },
-      checklist: (tk.template_task_checklists || []).map((chk: any) => ({
-        id: chk.id,
-        title: chk.title,
-        position: chk.position
-      })).sort((a: any, b: any) => a.position - b.position),
+      assigneeRule: tk.assignee_rule || { type: "manual" },
+      relativeDueDate: tk.relative_due_date || {
+        amount: 0,
+        unit: "days",
+        direction: "after",
+        base: "contract_signed_at",
+      },
+      checklist: (tk.template_task_checklists || [])
+        .map((chk: any) => ({
+          id: chk.id,
+          title: chk.title,
+          position: chk.position,
+        }))
+        .sort((a: any, b: any) => a.position - b.position),
       dependencies: tk.dependencies || [],
       tags: tk.tags || [],
-      isClientVisible: tk.visibility === 'client_visible'
-    }))
+      isClientVisible: tk.visibility === "client_visible",
+    })),
   }));
 
   const createMutation = useMutation({
@@ -76,14 +85,20 @@ export function useTemplateWorkspace() {
       const colMap: Record<string, string> = {};
       if (template.columns?.length > 0) {
         for (const col of template.columns) {
-          const { data, error } = await supabase.from('template_columns').insert([{
-             agency_id: newTemplate.agency_id,
-             template_id: newTemplate.id,
-             title: col.title,
-             position: col.position,
-             color: col.color,
-             is_final_column: col.isFinalColumn
-          }]).select().single();
+          const { data, error } = await supabase
+            .from("template_columns")
+            .insert([
+              {
+                agency_id: newTemplate.agency_id,
+                template_id: newTemplate.id,
+                title: col.title,
+                position: col.position,
+                color: col.color,
+                is_final_column: col.isFinalColumn,
+              },
+            ])
+            .select()
+            .single();
           if (error) throw error;
           if (data) colMap[col.id] = data.id;
         }
@@ -91,28 +106,36 @@ export function useTemplateWorkspace() {
 
       if (template.tasks?.length > 0) {
         for (const task of template.tasks) {
-          const { data, error } = await supabase.from('template_tasks').insert([{
-            agency_id: newTemplate.agency_id,
-            template_id: newTemplate.id,
-            template_column_id: colMap[task.columnId],
-            title: task.title,
-            description: task.description,
-            priority: task.priority,
-            assignee_rule: task.assigneeRule,
-            relative_due_date: task.relativeDueDate,
-            dependencies: task.dependencies,
-            tags: task.tags,
-            visibility: task.isClientVisible ? 'client_visible' : 'internal'
-          }]).select().single();
+          const { data, error } = await supabase
+            .from("template_tasks")
+            .insert([
+              {
+                agency_id: newTemplate.agency_id,
+                template_id: newTemplate.id,
+                template_column_id: colMap[task.columnId],
+                title: task.title,
+                description: task.description,
+                priority: task.priority,
+                assignee_rule: task.assigneeRule,
+                relative_due_date: task.relativeDueDate,
+                dependencies: task.dependencies,
+                tags: task.tags,
+                visibility: task.isClientVisible ? "client_visible" : "internal",
+              },
+            ])
+            .select()
+            .single();
           if (error) throw error;
 
           if (data && task.checklist?.length > 0) {
             const checks = task.checklist.map((chk: any) => ({
               agency_id: newTemplate.agency_id,
               template_task_id: data.id,
-              title: chk.title
+              title: chk.title,
             }));
-            const { error: checkError } = await supabase.from('template_task_checklists').insert(checks);
+            const { error: checkError } = await supabase
+              .from("template_task_checklists")
+              .insert(checks);
             if (checkError) throw checkError;
           }
         }
@@ -120,13 +143,13 @@ export function useTemplateWorkspace() {
       return newTemplate;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agency_templates'] });
-      toast.success('Modelo criado com sucesso!');
-    }
+      queryClient.invalidateQueries({ queryKey: ["agency_templates"] });
+      toast.success("Modelo criado com sucesso!");
+    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, patch }: { id: string, patch: any }) => {
+    mutationFn: async ({ id, patch }: { id: string; patch: any }) => {
       await apiUpdateTemplate(id, {
         name: patch.name,
         description: patch.description,
@@ -135,134 +158,195 @@ export function useTemplateWorkspace() {
       });
 
       // Clear existing tree (cascades to tasks and checklists)
-      await supabase.from('template_columns').delete().eq('template_id', id);
-      
+      await supabase.from("template_columns").delete().eq("template_id", id);
+
       const { data: authUser } = await supabase.auth.getUser();
-      if (!authUser.user) throw new Error('Not authenticated');
+      if (!authUser.user) throw new Error("Not authenticated");
 
       const { data: userData } = await supabase
-        .from('users')
-        .select('agency_id')
-        .eq('id', authUser.user.id)
+        .from("users")
+        .select("agency_id")
+        .eq("id", authUser.user.id)
         .single();
       const agencyId = userData?.agency_id;
 
       const colMap: Record<string, string> = {};
       if (patch.columns?.length > 0) {
         for (const col of patch.columns) {
-          const { data } = await supabase.from('template_columns').insert([{
-             agency_id: agencyId,
-             template_id: id,
-             title: col.title,
-             position: col.position,
-             color: col.color,
-             is_final_column: col.isFinalColumn
-          }]).select().single();
+          const { data } = await supabase
+            .from("template_columns")
+            .insert([
+              {
+                agency_id: agencyId,
+                template_id: id,
+                title: col.title,
+                position: col.position,
+                color: col.color,
+                is_final_column: col.isFinalColumn,
+              },
+            ])
+            .select()
+            .single();
           if (data) colMap[col.id] = data.id;
         }
       }
 
       if (patch.tasks?.length > 0) {
         for (const task of patch.tasks) {
-          const { data } = await supabase.from('template_tasks').insert([{
-            agency_id: agencyId,
-            template_id: id,
-            template_column_id: colMap[task.columnId] || null,
-            title: task.title,
-            description: task.description,
-            priority: task.priority,
-            assignee_rule: task.assigneeRule,
-            relative_due_date: task.relativeDueDate,
-            dependencies: task.dependencies,
-            tags: task.tags,
-            visibility: task.isClientVisible ? 'client_visible' : 'internal'
-          }]).select().single();
+          const { data } = await supabase
+            .from("template_tasks")
+            .insert([
+              {
+                agency_id: agencyId,
+                template_id: id,
+                template_column_id: colMap[task.columnId] || null,
+                title: task.title,
+                description: task.description,
+                priority: task.priority,
+                assignee_rule: task.assigneeRule,
+                relative_due_date: task.relativeDueDate,
+                dependencies: task.dependencies,
+                tags: task.tags,
+                visibility: task.isClientVisible ? "client_visible" : "internal",
+              },
+            ])
+            .select()
+            .single();
 
           if (data && task.checklist?.length > 0) {
             const checks = task.checklist.map((chk: any) => ({
               agency_id: agencyId,
               template_task_id: data.id,
-              title: chk.title
+              title: chk.title,
             }));
-            await supabase.from('template_task_checklists').insert(checks);
+            await supabase.from("template_task_checklists").insert(checks);
           }
         }
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agency_templates'] });
-      toast.success('Modelo atualizado com sucesso!');
-    }
+      queryClient.invalidateQueries({ queryKey: ["agency_templates"] });
+      toast.success("Modelo atualizado com sucesso!");
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: apiDeleteTemplate,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agency_templates'] });
-      toast.success('Modelo excluído com sucesso!');
-    }
+      queryClient.invalidateQueries({ queryKey: ["agency_templates"] });
+      toast.success("Modelo excluído com sucesso!");
+    },
   });
 
   const duplicateMutation = useMutation({
     mutationFn: apiDuplicateTemplate,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agency_templates'] });
-      toast.success('Modelo duplicado com sucesso!');
-    }
+      queryClient.invalidateQueries({ queryKey: ["agency_templates"] });
+      toast.success("Modelo duplicado com sucesso!");
+    },
   });
 
   // Granular DB operations
   const addColumnMutation = useMutation({
     mutationFn: async ({ templateId, column }: any) => {
       const { data: authUser } = await supabase.auth.getUser();
-      if (!authUser.user) throw new Error('Not authenticated');
+      if (!authUser.user) throw new Error("Not authenticated");
 
       const { data: userData } = await supabase
-        .from('users')
-        .select('agency_id')
-        .eq('id', authUser.user.id)
+        .from("users")
+        .select("agency_id")
+        .eq("id", authUser.user.id)
         .single();
-      const { data, error } = await supabase.from('template_columns').insert([{
-        agency_id: userData?.agency_id,
-        template_id: templateId,
-        title: column.title,
-        position: column.position,
-        color: column.color,
-        is_final_column: column.isFinalColumn
-      }]);
+      const { data, error } = await supabase.from("template_columns").insert([
+        {
+          agency_id: userData?.agency_id,
+          template_id: templateId,
+          title: column.title,
+          position: column.position,
+          color: column.color,
+          is_final_column: column.isFinalColumn,
+        },
+      ]);
       if (error) throw error;
       return data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['agency_templates'] })
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["agency_templates"] }),
+  });
+
+  const updateColumnMutation = useMutation({
+    mutationFn: async ({ columnId, patch }: any) => {
+      const dbPatch: any = {};
+      if (patch.title !== undefined) dbPatch.title = patch.title;
+      if (patch.position !== undefined) dbPatch.position = patch.position;
+      if (patch.color !== undefined) dbPatch.color = patch.color;
+      if (patch.isFinalColumn !== undefined) dbPatch.is_final_column = patch.isFinalColumn;
+
+      const { error } = await supabase.from("template_columns").update(dbPatch).eq("id", columnId);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["agency_templates"] }),
+  });
+
+  const reorderColumnMutation = useMutation({
+    mutationFn: async ({ templateId, columnId, direction }: any) => {
+      const { data: columns, error } = await supabase
+        .from("template_columns")
+        .select("id, position")
+        .eq("template_id", templateId)
+        .order("position", { ascending: true });
+      if (error) throw error;
+      if (!columns?.length) return;
+
+      const currentIndex = columns.findIndex((column) => column.id === columnId);
+      const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+      if (currentIndex < 0 || targetIndex < 0 || targetIndex >= columns.length) return;
+
+      const current = columns[currentIndex];
+      const target = columns[targetIndex];
+      const { error: currentError } = await supabase
+        .from("template_columns")
+        .update({ position: target.position })
+        .eq("id", current.id);
+      if (currentError) throw currentError;
+
+      const { error: targetError } = await supabase
+        .from("template_columns")
+        .update({ position: current.position })
+        .eq("id", target.id);
+      if (targetError) throw targetError;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["agency_templates"] }),
   });
 
   const addTaskMutation = useMutation({
     mutationFn: async ({ templateId, task }: any) => {
       const { data: authUser } = await supabase.auth.getUser();
-      if (!authUser.user) throw new Error('Not authenticated');
+      if (!authUser.user) throw new Error("Not authenticated");
 
       const { data: userData } = await supabase
-        .from('users')
-        .select('agency_id')
-        .eq('id', authUser.user.id)
+        .from("users")
+        .select("agency_id")
+        .eq("id", authUser.user.id)
         .single();
-      const { data, error } = await supabase.from('template_tasks').insert([{
-        agency_id: userData?.agency_id,
-        template_id: templateId,
-        template_column_id: task.columnId,
-        title: task.title,
-        description: task.description,
-        priority: task.priority,
-        assignee_rule: task.assigneeRule,
-        relative_due_date: task.relativeDueDate,
-        dependencies: task.dependencies,
-        tags: task.tags,
-        visibility: task.isClientVisible ? 'client_visible' : 'internal'
-      }]);
+      const { data, error } = await supabase.from("template_tasks").insert([
+        {
+          agency_id: userData?.agency_id,
+          template_id: templateId,
+          template_column_id: task.columnId,
+          title: task.title,
+          description: task.description,
+          priority: task.priority,
+          assignee_rule: task.assigneeRule,
+          relative_due_date: task.relativeDueDate,
+          dependencies: task.dependencies,
+          tags: task.tags,
+          visibility: task.isClientVisible ? "client_visible" : "internal",
+        },
+      ]);
       if (error) throw error;
       return data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['agency_templates'] })
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["agency_templates"] }),
   });
 
   const updateTaskMutation = useMutation({
@@ -275,31 +359,33 @@ export function useTemplateWorkspace() {
       if (patch.assigneeRule) dbPatch.assignee_rule = patch.assigneeRule;
       if (patch.relativeDueDate) dbPatch.relative_due_date = patch.relativeDueDate;
       if (patch.dependencies) dbPatch.dependencies = patch.dependencies;
-      
-      const { error } = await supabase.from('template_tasks').update(dbPatch).eq('id', taskId);
+
+      const { error } = await supabase.from("template_tasks").update(dbPatch).eq("id", taskId);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['agency_templates'] })
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["agency_templates"] }),
   });
 
   const addChecklistMutation = useMutation({
     mutationFn: async ({ taskId, title }: any) => {
       const { data: authUser } = await supabase.auth.getUser();
-      if (!authUser.user) throw new Error('Not authenticated');
+      if (!authUser.user) throw new Error("Not authenticated");
 
       const { data: userData } = await supabase
-        .from('users')
-        .select('agency_id')
-        .eq('id', authUser.user.id)
+        .from("users")
+        .select("agency_id")
+        .eq("id", authUser.user.id)
         .single();
-      const { error } = await supabase.from('template_task_checklists').insert([{
-        agency_id: userData?.agency_id,
-        template_task_id: taskId,
-        title
-      }]);
+      const { error } = await supabase.from("template_task_checklists").insert([
+        {
+          agency_id: userData?.agency_id,
+          template_task_id: taskId,
+          title,
+        },
+      ]);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['agency_templates'] })
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["agency_templates"] }),
   });
 
   // Interface wrappers
@@ -310,29 +396,34 @@ export function useTemplateWorkspace() {
     updateTemplate: (id: string, patch: any) => updateMutation.mutateAsync({ id, patch }),
     deleteTemplate: (id: string) => deleteMutation.mutateAsync(id),
     duplicateTemplate: (id: string) => duplicateMutation.mutateAsync(id),
-    
+
     // Columns
-    addColumn: (templateId: string, column: any) => addColumnMutation.mutateAsync({ templateId, column }),
-    updateColumn: (templateId: string, columnId: string, patch: any) => { /* TODO: hook to DB */ },
+    addColumn: (templateId: string, column: any) =>
+      addColumnMutation.mutateAsync({ templateId, column }),
+    updateColumn: (_templateId: string, columnId: string, patch: any) =>
+      updateColumnMutation.mutateAsync({ columnId, patch }),
     removeColumn: async (templateId: string, columnId: string) => {
-      await supabase.from('template_columns').delete().eq('id', columnId);
-      queryClient.invalidateQueries({ queryKey: ['agency_templates'] });
+      await supabase.from("template_columns").delete().eq("id", columnId);
+      queryClient.invalidateQueries({ queryKey: ["agency_templates"] });
     },
-    reorderColumn: (templateId: string, columnId: string, direction: 'up' | 'down') => { /* TODO: hook to DB */ },
-    
+    reorderColumn: (templateId: string, columnId: string, direction: "up" | "down") =>
+      reorderColumnMutation.mutateAsync({ templateId, columnId, direction }),
+
     // Tasks
     addTask: (templateId: string, task: any) => addTaskMutation.mutateAsync({ templateId, task }),
-    updateTask: (templateId: string, taskId: string, patch: any) => updateTaskMutation.mutateAsync({ taskId, patch }),
+    updateTask: (templateId: string, taskId: string, patch: any) =>
+      updateTaskMutation.mutateAsync({ taskId, patch }),
     removeTask: async (templateId: string, taskId: string) => {
-      await supabase.from('template_tasks').delete().eq('id', taskId);
-      queryClient.invalidateQueries({ queryKey: ['agency_templates'] });
+      await supabase.from("template_tasks").delete().eq("id", taskId);
+      queryClient.invalidateQueries({ queryKey: ["agency_templates"] });
     },
-    
+
     // Checklist
-    addChecklistItem: (templateId: string, taskId: string, title: string) => addChecklistMutation.mutateAsync({ taskId, title }),
+    addChecklistItem: (templateId: string, taskId: string, title: string) =>
+      addChecklistMutation.mutateAsync({ taskId, title }),
     removeChecklistItem: async (templateId: string, taskId: string, itemId: string) => {
-      await supabase.from('template_task_checklists').delete().eq('id', itemId);
-      queryClient.invalidateQueries({ queryKey: ['agency_templates'] });
-    }
+      await supabase.from("template_task_checklists").delete().eq("id", itemId);
+      queryClient.invalidateQueries({ queryKey: ["agency_templates"] });
+    },
   };
 }

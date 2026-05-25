@@ -1,11 +1,11 @@
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 import type {
   WhatsAppConnectionStatus,
   WhatsAppGroup,
   WhatsAppInstance,
-} from '@/data/mockWhatsAppConnection';
+} from "@/data/mockWhatsAppConnection";
 
-const DEFAULT_INSTANCE_NAME = 'TaskFlow-Evolution-1';
+const DEFAULT_INSTANCE_NAME = "TaskFlow-Evolution-1";
 
 type EvolutionConnectionState = {
   state?: string;
@@ -18,11 +18,13 @@ type EvolutionConnectionState = {
     profileName?: string;
     owner?: string;
   };
-  qrcode?: string | {
-    base64?: string;
-    code?: string;
-    pairingCode?: string | null;
-  };
+  qrcode?:
+    | string
+    | {
+        base64?: string;
+        code?: string;
+        pairingCode?: string | null;
+      };
   base64?: string;
   code?: string;
   pairingCode?: string;
@@ -38,28 +40,35 @@ export type EvolutionConnectResult = {
 function toConnectionStatus(value?: string): WhatsAppConnectionStatus {
   const state = value?.toLowerCase();
 
-  if (state === 'open' || state === 'connected' || state === 'online') return 'connected';
-  if (state === 'connecting') return 'connecting';
-  if (state === 'qr' || state === 'qrcode' || state === 'waiting_qr') return 'waiting_qr';
-  if (state === 'close' || state === 'closed' || state === 'disconnected' || state === 'offline') {
-    return 'disconnected';
+  if (state === "open" || state === "connected" || state === "online") return "connected";
+  if (state === "connecting") return "connecting";
+  if (state === "qr" || state === "qrcode" || state === "waiting_qr") return "waiting_qr";
+  if (state === "close" || state === "closed" || state === "disconnected" || state === "offline") {
+    return "disconnected";
   }
 
-  return 'disconnected';
+  return "disconnected";
 }
 
 function getState(payload: EvolutionConnectionState): string | undefined {
-  return payload.instance?.state ?? payload.instance?.status ?? payload.state ?? payload.connection ?? payload.status;
+  return (
+    payload.instance?.state ??
+    payload.instance?.status ??
+    payload.state ??
+    payload.connection ??
+    payload.status
+  );
 }
 
 function normalizeQrCode(payload: EvolutionConnectionState): string | undefined {
-  const qrCode = typeof payload.qrcode === 'object'
-    ? payload.qrcode.base64 ?? payload.qrcode.code
-    : payload.qrcode ?? payload.base64;
+  const qrCode =
+    typeof payload.qrcode === "object"
+      ? (payload.qrcode.base64 ?? payload.qrcode.code)
+      : (payload.qrcode ?? payload.base64);
   if (!qrCode) return undefined;
-  if (qrCode.startsWith('data:image')) return qrCode;
-  if (qrCode.startsWith('http')) return qrCode;
-  if (qrCode.length > 200) return `data:image/png;base64,${qrCode.replace(/^base64,/, '')}`;
+  if (qrCode.startsWith("data:image")) return qrCode;
+  if (qrCode.startsWith("http")) return qrCode;
+  if (qrCode.length > 200) return `data:image/png;base64,${qrCode.replace(/^base64,/, "")}`;
   return qrCode;
 }
 
@@ -70,8 +79,8 @@ function normalizeGroup(group: Record<string, unknown>, index: number): WhatsApp
   return {
     id,
     jid: String(group.jid ?? group.id ?? group.remoteJid ?? group.groupJid ?? id),
-    name: String(group.subject ?? group.name ?? group.title ?? 'Grupo sem nome'),
-    type: 'client',
+    name: String(group.subject ?? group.name ?? group.title ?? "Grupo sem nome"),
+    type: "client",
     membersCount: Number(group.size ?? group.participantsCount ?? participants.length ?? 0),
     lastSyncAt: new Date().toISOString(),
   };
@@ -83,7 +92,10 @@ async function invokeEvolution<T>(functionName: string, body: Record<string, unk
   if (error) {
     const context = (error as { context?: unknown }).context;
     if (context instanceof Response) {
-      const payload = await context.json().catch(() => null) as { error?: string; message?: string } | null;
+      const payload = (await context.json().catch(() => null)) as {
+        error?: string;
+        message?: string;
+      } | null;
       throw new Error(payload?.error ?? payload?.message ?? error.message);
     }
 
@@ -102,48 +114,50 @@ export const evolutionService = {
   instanceName: DEFAULT_INSTANCE_NAME,
 
   async getStatus(instanceName = DEFAULT_INSTANCE_NAME): Promise<WhatsAppInstance> {
-    const data = await invokeEvolution<EvolutionConnectionState>('evolution-instance', {
-      action: 'status',
+    const data = await invokeEvolution<EvolutionConnectionState>("evolution-instance", {
+      action: "status",
       instanceName,
     });
     const state = getState(data);
 
     return {
       id: instanceName,
-      agencyId: 'agency-1',
+      agencyId: "agency-1",
       instanceName,
-      displayName: data.instance?.profileName ?? 'WhatsApp Principal',
-      phoneNumber: data.instance?.owner ?? '',
+      displayName: data.instance?.profileName ?? "WhatsApp Principal",
+      phoneNumber: data.instance?.owner ?? "",
       status: toConnectionStatus(state),
       lastSyncAt: new Date().toISOString(),
-      apiBaseUrl: 'https://painelevo.workidigital.tech',
-      maskedApiKey: '***************',
+      apiBaseUrl: "https://painelevo.workidigital.tech",
+      maskedApiKey: "***************",
     };
   },
 
   async connect(instanceName = DEFAULT_INSTANCE_NAME): Promise<EvolutionConnectResult> {
-    const data = await invokeEvolution<EvolutionConnectionState>('evolution-instance', {
-      action: 'connect',
+    const data = await invokeEvolution<EvolutionConnectionState>("evolution-instance", {
+      action: "connect",
       instanceName,
     });
 
     return {
-      status: normalizeQrCode(data) ? 'waiting_qr' : toConnectionStatus(getState(data)),
+      status: normalizeQrCode(data) ? "waiting_qr" : toConnectionStatus(getState(data)),
       qrCode: normalizeQrCode(data),
-      pairingCode: data.pairingCode ?? (typeof data.qrcode === 'object' ? data.qrcode.pairingCode ?? undefined : undefined),
+      pairingCode:
+        data.pairingCode ??
+        (typeof data.qrcode === "object" ? (data.qrcode.pairingCode ?? undefined) : undefined),
       raw: data,
     };
   },
 
   async logout(instanceName = DEFAULT_INSTANCE_NAME) {
-    return invokeEvolution('evolution-instance', {
-      action: 'logout',
+    return invokeEvolution("evolution-instance", {
+      action: "logout",
       instanceName,
     });
   },
 
   async fetchGroups(instanceName = DEFAULT_INSTANCE_NAME): Promise<WhatsAppGroup[]> {
-    const data = await invokeEvolution<unknown>('evolution-groups', { instanceName });
+    const data = await invokeEvolution<unknown>("evolution-groups", { instanceName });
     const groups = Array.isArray(data)
       ? data
       : Array.isArray((data as { groups?: unknown[] })?.groups)
@@ -166,8 +180,8 @@ export const evolutionService = {
     mentionsEveryOne?: boolean;
     mentioned?: string[];
   }) {
-    return invokeEvolution('evolution-message', {
-      action: 'send_text',
+    return invokeEvolution("evolution-message", {
+      action: "send_text",
       instanceName: payload.instanceName ?? DEFAULT_INSTANCE_NAME,
       number: payload.number,
       text: payload.text,

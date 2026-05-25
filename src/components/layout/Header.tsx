@@ -44,9 +44,12 @@ export function Header() {
   }, []);
 
   useEffect(() => {
-    agentService.getInsights(agentContext).then((data) => {
-      setHasActiveInsights(data.length > 0);
-    }).catch(() => {});
+    agentService
+      .getInsights(agentContext)
+      .then((data) => {
+        setHasActiveInsights(data.length > 0);
+      })
+      .catch(() => {});
   }, [agentContext]);
 
   const handleSignOut = async () => {
@@ -61,24 +64,27 @@ export function Header() {
 
   return (
     <>
-    <header className="sticky top-0 z-30 flex min-h-16 items-center gap-2 border-b border-border bg-background/60 px-3 backdrop-blur-xl sm:gap-3 sm:px-4 md:px-6">
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Abrir menu de navegação">
-            <Menu className="h-5 w-5" aria-hidden="true" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-[min(85vw,22rem)] border-r border-border bg-sidebar/95 p-0 sm:max-w-[22rem]">
-          <SheetTitle className="sr-only">Navegação principal</SheetTitle>
-          <Sidebar onNavigate={() => setOpen(false)} />
-        </SheetContent>
-      </Sheet>
+      <header className="sticky top-0 z-30 flex min-h-16 items-center gap-2 border-b border-border bg-background/60 px-3 backdrop-blur-xl sm:gap-3 sm:px-4 md:px-6">
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Abrir menu de navegação">
+              <Menu className="h-5 w-5" aria-hidden="true" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-[min(85vw,22rem)] border-r border-border bg-sidebar/95 p-0 sm:max-w-[22rem]">
+            <SheetTitle className="sr-only">Navegação principal</SheetTitle>
+            <Sidebar onNavigate={() => setOpen(false)} />
+          </SheetContent>
+        </Sheet>
 
-      <div className="min-w-0 flex-1">
-        <h1 className="truncate text-base font-semibold leading-tight md:text-lg">{current.label}</h1>
-        <p className="truncate text-xs text-muted-foreground">{current.subtitle}</p>
-      </div>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-base font-semibold leading-tight md:text-lg">
+            {current.label}
+          </h1>
+          <p className="truncate text-xs text-muted-foreground">{current.subtitle}</p>
+        </div>
 
+<<<<<<< HEAD
       <Button
         variant="ghost"
         size="icon"
@@ -131,12 +137,59 @@ export function Header() {
         </DropdownMenuContent>
       </DropdownMenu>
     </header>
+=======
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          aria-label="Agente Operacional"
+          onClick={() => setAgentOpen(true)}
+        >
+          <Bot className="h-5 w-5" />
+          {hasActiveInsights && (
+            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accent" />
+          )}
+        </Button>
 
-    <OperationalAgentPanel
-      open={agentOpen}
-      onOpenChange={setAgentOpen}
-      context={agentContext}
-    />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          aria-label="Notificacoes"
+          onClick={() => toast("Voce tem 3 notificacoes novas")}
+        >
+          <Bell className="h-5 w-5" />
+          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" />
+        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="rounded-full outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring">
+              <Avatar className="h-9 w-9 border border-border">
+                <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground">
+                  TF
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+              <div className="flex flex-col">
+                <span className="text-sm">Usuario logado</span>
+                <span className="text-xs text-muted-foreground">{email || "Sessao ativa"}</span>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </header>
+>>>>>>> 1706d84 (feat: implement multiple workspaces architecture)
+
+      <OperationalAgentPanel open={agentOpen} onOpenChange={setAgentOpen} context={agentContext} />
     </>
   );
 }

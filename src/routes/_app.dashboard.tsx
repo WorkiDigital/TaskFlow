@@ -18,7 +18,7 @@ function Dashboard() {
   useEffect(() => {
     getDashboardMetrics()
       .then(setMetrics)
-      .catch(e => console.error("[Dashboard] Erro ao carregar métricas:", e));
+      .catch((e) => console.error("[Dashboard] Erro ao carregar métricas:", e));
   }, []);
 
   return (
@@ -55,11 +55,13 @@ function Dashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-stretch">
+        <div className="lg:col-span-2 flex flex-col">
           <RecentActivity />
         </div>
-        <UpcomingDeadlines />
+        <div className="flex flex-col">
+          <UpcomingDeadlines />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

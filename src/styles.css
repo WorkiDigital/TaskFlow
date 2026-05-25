@@ -191,7 +191,7 @@
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(139, 92, 246, 0.8);
   }
-  
+  /* Hide scrollbar for clean UI but keep it functional */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }

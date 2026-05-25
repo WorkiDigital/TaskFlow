@@ -1,50 +1,63 @@
+import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { mockContracts } from "@/lib/mock-data";
-
-const labels = {
-  draft: "Rascunho",
-  pending: "Pendente",
-  signed: "Assinado",
-  expired: "Expirado",
-} as const;
-
-const colors = {
-  draft: "bg-muted-foreground/60",
-  pending: "bg-warning",
-  signed: "bg-success",
-  expired: "bg-destructive",
-} as const;
+import { Skeleton } from "@/components/ui/skeleton";
+import { getContractStatusCounts, type ContractStatusCount } from "@/services/dashboardService";
 
 export function ContractsStatusCard() {
-  const total = mockContracts.length;
-  const counts = mockContracts.reduce<Record<string, number>>((acc, c) => {
-    acc[c.status] = (acc[c.status] ?? 0) + 1;
-    return acc;
-  }, {});
+  const [counts, setCounts] = useState<ContractStatusCount[] | null>(null);
+
+  useEffect(() => {
+    getContractStatusCounts()
+      .then(setCounts)
+      .catch((e) => {
+        console.error("[Dashboard] contratos:", e);
+        setCounts([]);
+      });
+  }, []);
+
+  const total = counts?.reduce((acc, c) => acc + c.count, 0) ?? 0;
 
   return (
     <GlassCard className="h-full">
       <div className="mb-4">
         <h3 className="text-sm font-semibold">Status dos contratos</h3>
-        <p className="text-xs text-muted-foreground">{total} contratos no total</p>
+        <p className="text-xs text-muted-foreground">
+          {counts ? `${total} contrato${total !== 1 ? "s" : ""} no total` : "Carregando..."}
+        </p>
       </div>
-      <div className="space-y-4">
-        {(Object.keys(labels) as Array<keyof typeof labels>).map((k) => {
-          const n = counts[k] ?? 0;
-          const pct = total === 0 ? 0 : (n / total) * 100;
-          return (
-            <div key={k}>
-              <div className="mb-1.5 flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">{labels[k]}</span>
-                <span className="font-medium">{n}</span>
+
+      {!counts ? (
+        <div className="space-y-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-6 w-full" />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {counts.map((c) => {
+            const pct = total === 0 ? 0 : (c.count / total) * 100;
+            return (
+              <div key={c.status}>
+                <div className="mb-1.5 flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">{c.label}</span>
+                  <span className="font-medium">{c.count}</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+                  <div
+                    className={`h-full rounded-full transition-all ${c.color}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
-                <div className={`h-full rounded-full ${colors[k]} transition-all`} style={{ width: `${pct}%` }} />
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+          {total === 0 && (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              Nenhum contrato criado ainda.
+            </p>
+          )}
+        </div>
+      )}
     </GlassCard>
   );
 }

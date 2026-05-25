@@ -1,7 +1,15 @@
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, SelectLabel, SelectGroup } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { useEffect, useState } from 'react';
-import type { ContractTemplate } from '@/services/contractsService';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+  SelectLabel,
+  SelectGroup,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { useEffect, useState } from "react";
+import type { ContractTemplate } from "@/services/contractsService";
 
 /**
  * Dropdown for selecting a contract template.

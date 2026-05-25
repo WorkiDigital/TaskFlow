@@ -1,19 +1,29 @@
-import { useState, useEffect } from 'react';
-import { useTemplateWorkspace } from '@/hooks/useTemplateWorkspace';
-import { AgencyTemplate, TemplateCategory, TemplateStatus } from '@/data/templateTypes';
-import { templateCategories } from '@/data/mockAgencyTemplates';
-import { GlassCard } from '@/components/ui/GlassCard';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { TemplateColumnBuilder } from './TemplateColumnBuilder';
-import { TemplateTaskBuilder } from './TemplateTaskBuilder';
-import { TemplateAutomationSettings } from './TemplateAutomationSettings';
-import { TemplatePreview } from './TemplatePreview';
-import { ChevronLeft, Save, X, Info, Settings, KanbanSquare, ListTodo, Zap, Eye } from 'lucide-react';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import { useTemplateWorkspace } from "@/hooks/useTemplateWorkspace";
+import { AgencyTemplate, TemplateCategory, TemplateStatus } from "@/data/templateTypes";
+import { templateCategories } from "@/data/mockAgencyTemplates";
+import { GlassCard } from "@/components/ui/GlassCard";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { TemplateColumnBuilder } from "./TemplateColumnBuilder";
+import { TemplateTaskBuilder } from "./TemplateTaskBuilder";
+import { TemplateAutomationSettings } from "./TemplateAutomationSettings";
+import { TemplatePreview } from "./TemplatePreview";
+import {
+  ChevronLeft,
+  Save,
+  X,
+  Info,
+  Settings,
+  KanbanSquare,
+  ListTodo,
+  Zap,
+  Eye,
+} from "lucide-react";
+import { toast } from "sonner";
 
 interface TemplateEditorProps {
   templateId: string | null;
@@ -21,37 +31,44 @@ interface TemplateEditorProps {
 }
 
 const DEFAULT_TEMPLATE = {
-  name: '',
-  description: '',
-  category: 'paid_traffic' as TemplateCategory,
-  status: 'draft' as TemplateStatus,
+  name: "",
+  description: "",
+  category: "paid_traffic" as TemplateCategory,
+  status: "draft" as TemplateStatus,
   columns: [
-    { id: 'col-default-1', title: 'A fazer', position: 1, color: 'bg-slate-400' },
-    { id: 'col-default-2', title: 'Em andamento', position: 2, color: 'bg-blue-500' },
-    { id: 'col-default-3', title: 'Finalizado', position: 3, color: 'bg-green-500', isFinalColumn: true }
+    { id: "col-default-1", title: "A fazer", position: 1, color: "bg-slate-400" },
+    { id: "col-default-2", title: "Em andamento", position: 2, color: "bg-blue-500" },
+    {
+      id: "col-default-3",
+      title: "Finalizado",
+      position: 3,
+      color: "bg-green-500",
+      isFinalColumn: true,
+    },
   ],
   tasks: [],
   automation: {
     enabled: false,
-    trigger: 'manual' as const,
+    trigger: "manual" as const,
     createProject: true,
     createTasks: true,
     assignUsers: false,
     notifyInternalGroup: false,
-    requireManualReview: true
-  }
+    requireManualReview: true,
+  },
 };
 
 export function TemplateEditor({ templateId, onBack }: TemplateEditorProps) {
   const { templates, createTemplate, updateTemplate } = useTemplateWorkspace();
-  const [currentTemplate, setCurrentTemplate] = useState<Omit<AgencyTemplate, 'id' | 'lastEditedAt'>>(DEFAULT_TEMPLATE);
-  
+  const [currentTemplate, setCurrentTemplate] =
+    useState<Omit<AgencyTemplate, "id" | "lastEditedAt">>(DEFAULT_TEMPLATE);
+
   // Load template if editing
   useEffect(() => {
     if (templateId) {
-      const template = templates.find(t => t.id === templateId);
+      const template = templates.find((t) => t.id === templateId);
       if (template) {
-        console.log('[TemplateEditor] Loaded template for editing:', templateId, template.name);
+        console.log("[TemplateEditor] Loaded template for editing:", templateId, template.name);
         setCurrentTemplate({
           name: template.name,
           description: template.description,
@@ -60,33 +77,33 @@ export function TemplateEditor({ templateId, onBack }: TemplateEditorProps) {
           columns: template.columns,
           tasks: template.tasks,
           automation: template.automation,
-          linkedContractTitle: template.linkedContractTitle
+          linkedContractTitle: template.linkedContractTitle,
         });
       }
     }
   }, [templateId, templates]);
 
   const updateLocal = (key: string, value: any) => {
-    setCurrentTemplate(prev => ({
+    setCurrentTemplate((prev) => ({
       ...prev,
-      [key]: value
+      [key]: value,
     }));
   };
 
   const handleSave = () => {
     if (!currentTemplate.name.trim()) {
-      toast.error('O nome do modelo é obrigatório.');
+      toast.error("O nome do modelo é obrigatório.");
       return;
     }
 
     if (currentTemplate.columns.length === 0) {
-      toast.error('O modelo precisa ter pelo menos uma coluna.');
+      toast.error("O modelo precisa ter pelo menos uma coluna.");
       return;
     }
 
     if (templateId) {
       updateTemplate(templateId, currentTemplate);
-      toast.success('Modelo atualizado com sucesso!');
+      toast.success("Modelo atualizado com sucesso!");
     } else {
       createTemplate(currentTemplate);
     }
@@ -98,25 +115,34 @@ export function TemplateEditor({ templateId, onBack }: TemplateEditorProps) {
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b border-border/40 pb-4">
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={onBack} className="h-8 w-8 text-muted-foreground hover:text-foreground">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onBack}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <div>
             <h2 className="text-xl font-semibold tracking-tight">
-              {templateId ? `Editar: ${currentTemplate.name}` : 'Criar Novo Template'}
+              {templateId ? `Editar: ${currentTemplate.name}` : "Criar Novo Template"}
             </h2>
             <p className="text-xs text-muted-foreground">
               Configure metadados, colunas, tarefas e automações vinculadas.
             </p>
           </div>
         </div>
-        
+
         <div className="flex gap-2 justify-end">
           <Button variant="outline" size="sm" onClick={onBack} className="gap-1.5 text-xs h-9">
             <X className="h-4 w-4" />
             Cancelar
           </Button>
-          <Button size="sm" onClick={handleSave} className="gap-1.5 bg-primary text-primary-foreground text-xs h-9 shadow-[var(--shadow-glow)]">
+          <Button
+            size="sm"
+            onClick={handleSave}
+            className="gap-1.5 bg-primary text-primary-foreground text-xs h-9 shadow-[var(--shadow-glow)]"
+          >
             <Save className="h-4 w-4" />
             Salvar Modelo
           </Button>
@@ -147,15 +173,19 @@ export function TemplateEditor({ templateId, onBack }: TemplateEditorProps) {
         {/* TAB 1: GENERAL */}
         <TabsContent value="geral" className="space-y-4">
           <GlassCard className="p-6 border border-border/40 space-y-4">
-            <h3 className="text-sm font-semibold border-b border-border/30 pb-2 text-foreground">Informações Gerais</h3>
-            
+            <h3 className="text-sm font-semibold border-b border-border/30 pb-2 text-foreground">
+              Informações Gerais
+            </h3>
+
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="tmpl-name" className="text-xs">Nome do Template *</Label>
+                <Label htmlFor="tmpl-name" className="text-xs">
+                  Nome do Template *
+                </Label>
                 <Input
                   id="tmpl-name"
                   value={currentTemplate.name}
-                  onChange={(e) => updateLocal('name', e.target.value)}
+                  onChange={(e) => updateLocal("name", e.target.value)}
                   placeholder="Ex: Gestão de Tráfego Mensal Premium"
                   className="bg-background/20"
                 />
@@ -163,25 +193,31 @@ export function TemplateEditor({ templateId, onBack }: TemplateEditorProps) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="tmpl-category" className="text-xs">Categoria</Label>
+                  <Label htmlFor="tmpl-category" className="text-xs">
+                    Categoria
+                  </Label>
                   <select
                     id="tmpl-category"
                     value={currentTemplate.category}
-                    onChange={(e) => updateLocal('category', e.target.value as TemplateCategory)}
+                    onChange={(e) => updateLocal("category", e.target.value as TemplateCategory)}
                     className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary h-10"
                   >
-                    {templateCategories.map(cat => (
-                      <option key={cat.value} value={cat.value}>{cat.label}</option>
+                    {templateCategories.map((cat) => (
+                      <option key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="tmpl-status" className="text-xs">Status do Template</Label>
+                  <Label htmlFor="tmpl-status" className="text-xs">
+                    Status do Template
+                  </Label>
                   <select
                     id="tmpl-status"
                     value={currentTemplate.status}
-                    onChange={(e) => updateLocal('status', e.target.value as TemplateStatus)}
+                    onChange={(e) => updateLocal("status", e.target.value as TemplateStatus)}
                     className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary h-10"
                   >
                     <option value="active">Ativo (Pronto para Automação)</option>
@@ -193,11 +229,13 @@ export function TemplateEditor({ templateId, onBack }: TemplateEditorProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tmpl-desc" className="text-xs">Descrição Operacional</Label>
+              <Label htmlFor="tmpl-desc" className="text-xs">
+                Descrição Operacional
+              </Label>
               <Textarea
                 id="tmpl-desc"
                 value={currentTemplate.description}
-                onChange={(e) => updateLocal('description', e.target.value)}
+                onChange={(e) => updateLocal("description", e.target.value)}
                 placeholder="Descreva o propósito deste fluxo e em quais tipos de contrato ele é recomendado."
                 className="bg-background/20 min-h-[6rem] resize-y"
               />
@@ -210,7 +248,7 @@ export function TemplateEditor({ templateId, onBack }: TemplateEditorProps) {
           <GlassCard className="p-6 border border-border/40">
             <TemplateColumnBuilder
               columns={currentTemplate.columns}
-              onChange={(columns) => updateLocal('columns', columns)}
+              onChange={(columns) => updateLocal("columns", columns)}
             />
           </GlassCard>
         </TabsContent>
@@ -221,7 +259,7 @@ export function TemplateEditor({ templateId, onBack }: TemplateEditorProps) {
             <TemplateTaskBuilder
               tasks={currentTemplate.tasks}
               columns={currentTemplate.columns}
-              onChange={(tasks) => updateLocal('tasks', tasks)}
+              onChange={(tasks) => updateLocal("tasks", tasks)}
             />
           </GlassCard>
         </TabsContent>
@@ -231,9 +269,9 @@ export function TemplateEditor({ templateId, onBack }: TemplateEditorProps) {
           <GlassCard className="p-6 border border-border/40">
             <TemplateAutomationSettings
               automation={currentTemplate.automation}
-              onChange={(automation) => updateLocal('automation', automation)}
+              onChange={(automation) => updateLocal("automation", automation)}
               linkedContractTitle={currentTemplate.linkedContractTitle}
-              onLinkedContractChange={(title) => updateLocal('linkedContractTitle', title)}
+              onLinkedContractChange={(title) => updateLocal("linkedContractTitle", title)}
             />
           </GlassCard>
         </TabsContent>

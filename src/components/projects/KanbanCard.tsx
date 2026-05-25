@@ -1,11 +1,31 @@
 import { ProjectTask } from "@/data/mockProjects";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, MessageSquare, MoreHorizontal } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  MessageSquare,
+  MoreHorizontal,
+  Pencil,
+  Copy,
+  UserPlus,
+  Trash2,
+} from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 interface KanbanCardProps {
   task: ProjectTask;
   onClick: (task: ProjectTask) => void;
+  onAction?: (
+    action: "edit" | "duplicate" | "change_assignee" | "delete",
+    task: ProjectTask,
+  ) => void;
 }
 
 const priorityColors = {
@@ -22,11 +42,19 @@ const priorityLabels = {
   urgent: "Urgente",
 };
 
-export function KanbanCard({ task, onClick }: KanbanCardProps) {
-  const completedChecklist = task.checklist?.filter(c => c.done).length || 0;
+export function KanbanCard({ task, onClick, onAction }: KanbanCardProps) {
+  const completedChecklist = task.checklist?.filter((c) => c.done).length || 0;
   const totalChecklist = task.checklist?.length || 0;
   const hasChecklist = totalChecklist > 0;
   const commentCount = task.comments?.length || 0;
+
+  const handleAction = (
+    e: React.MouseEvent,
+    action: "edit" | "duplicate" | "change_assignee" | "delete",
+  ) => {
+    e.stopPropagation();
+    if (onAction) onAction(action, task);
+  };
 
   return (
     <div
@@ -35,20 +63,50 @@ export function KanbanCard({ task, onClick }: KanbanCardProps) {
     >
       <div className="flex justify-between items-start">
         <div className="flex gap-1.5 flex-wrap">
-          <Badge variant="outline" className={`text-[9px] px-1.5 py-0 uppercase font-semibold tracking-wider ${priorityColors[task.priority]}`}>
+          <Badge
+            variant="outline"
+            className={`text-[9px] px-1.5 py-0 uppercase font-semibold tracking-wider ${priorityColors[task.priority]}`}
+          >
             {priorityLabels[task.priority]}
           </Badge>
-          {task.tags?.map(tag => (
-            <Badge key={tag} variant="outline" className="text-[9px] px-1.5 py-0 bg-white/5 border-white/10 text-muted-foreground">
+          {task.tags?.map((tag) => (
+            <Badge
+              key={tag}
+              variant="outline"
+              className="text-[9px] px-1.5 py-0 bg-white/5 border-white/10 text-muted-foreground"
+            >
               {tag}
             </Badge>
           ))}
         </div>
-        <button className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-opacity">
-          <MoreHorizontal className="w-4 h-4" />
-        </button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <button className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-opacity">
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={(e) => handleAction(e, "edit")}>
+              <Pencil className="mr-2 h-4 w-4" /> Editar tarefa
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => handleAction(e, "change_assignee")}>
+              <UserPlus className="mr-2 h-4 w-4" /> Alterar responsável
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => handleAction(e, "duplicate")}>
+              <Copy className="mr-2 h-4 w-4" /> Duplicar tarefa
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={(e) => handleAction(e, "delete")}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Excluir tarefa
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-      
+
       <div>
         <h4 className="text-sm font-semibold text-foreground leading-tight mb-1">{task.title}</h4>
         {task.description && (
@@ -56,17 +114,21 @@ export function KanbanCard({ task, onClick }: KanbanCardProps) {
             {task.description}
           </p>
         )}
-        {task.customFields?.clientApproval === 'Pendente' && (
-           <span className="text-[10px] text-orange-400 font-medium">Aguardando Cliente</span>
+        {task.customFields?.clientApproval === "Pendente" && (
+          <span className="text-[10px] text-orange-400 font-medium">Aguardando Cliente</span>
         )}
       </div>
-      
+
       <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-2 border-t border-white/5">
         <div className="flex items-center gap-3">
           {hasChecklist && (
             <div className="flex items-center gap-1" title="Checklist">
-              <CheckCircle2 className={`w-3.5 h-3.5 ${completedChecklist === totalChecklist ? 'text-success' : ''}`} />
-              <span className="text-[10px]">{completedChecklist}/{totalChecklist}</span>
+              <CheckCircle2
+                className={`w-3.5 h-3.5 ${completedChecklist === totalChecklist ? "text-success" : ""}`}
+              />
+              <span className="text-[10px]">
+                {completedChecklist}/{totalChecklist}
+              </span>
             </div>
           )}
           {commentCount > 0 && (
@@ -76,12 +138,19 @@ export function KanbanCard({ task, onClick }: KanbanCardProps) {
             </div>
           )}
         </div>
-        
+
         <div className="flex items-center gap-2">
           {task.dueDate && (
-            <div className={`flex items-center gap-1 text-[10px] font-medium ${new Date(task.dueDate) < new Date() ? 'text-red-400' : ''}`}>
+            <div
+              className={`flex items-center gap-1 text-[10px] font-medium ${new Date(task.dueDate) < new Date() ? "text-red-400" : ""}`}
+            >
               <Clock className="w-3 h-3" />
-              <span>{new Date(task.dueDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+              <span>
+                {new Date(task.dueDate).toLocaleDateString("pt-BR", {
+                  day: "2-digit",
+                  month: "short",
+                })}
+              </span>
             </div>
           )}
           <Avatar className="h-6 w-6 border border-border">

@@ -17,7 +17,10 @@ export const Route = createFileRoute("/form/$formId")({
 
 function PublicFormPage() {
   const { formId } = Route.useParams();
-  const clientId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("clientId") : null;
+  const clientId =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("clientId")
+      : null;
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -38,12 +41,13 @@ function PublicFormPage() {
       }
 
       const remoteTemplates = data?.state?.formTemplates ?? [];
-      const templates = remoteTemplates.length > 0 ? remoteTemplates : initialOnboardingState.formTemplates;
-      const found = templates.find(template => template.id === formId) ?? null;
+      const templates =
+        remoteTemplates.length > 0 ? remoteTemplates : initialOnboardingState.formTemplates;
+      const found = templates.find((template) => template.id === formId) ?? null;
       setFormTemplate(found);
 
       if (found) {
-        setValues(Object.fromEntries(found.fields.map(field => [field.id, ""])));
+        setValues(Object.fromEntries(found.fields.map((field) => [field.id, ""])));
       }
 
       setLoading(false);
@@ -53,7 +57,7 @@ function PublicFormPage() {
   }, [formId]);
 
   const requiredFields = useMemo(
-    () => formTemplate?.fields.filter(field => field.required) ?? [],
+    () => formTemplate?.fields.filter((field) => field.required) ?? [],
     [formTemplate],
   );
 
@@ -61,7 +65,7 @@ function PublicFormPage() {
     event.preventDefault();
     if (!formTemplate) return;
 
-    const missing = requiredFields.find(field => !String(values[field.id] ?? "").trim());
+    const missing = requiredFields.find((field) => !String(values[field.id] ?? "").trim());
     if (missing) {
       toast.error(`Preencha: ${missing.label}`);
       return;
@@ -69,7 +73,7 @@ function PublicFormPage() {
 
     setSubmitting(true);
     const payload = Object.fromEntries(
-      formTemplate.fields.map(field => [
+      formTemplate.fields.map((field) => [
         field.variableKey || field.id,
         {
           label: field.label,
@@ -90,7 +94,6 @@ function PublicFormPage() {
       toast.error(error instanceof Error ? error.message : "Nao foi possivel enviar o formulario.");
     } finally {
       setSubmitting(false);
-      return;
     }
   };
 
@@ -110,7 +113,9 @@ function PublicFormPage() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="glass-card max-w-md w-full p-8 text-center">
           <h1 className="text-xl font-semibold text-destructive">Formulario nao encontrado</h1>
-          <p className="text-sm text-muted-foreground mt-2">Confira se o link publico esta correto.</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Confira se o link publico esta correto.
+          </p>
         </div>
       </div>
     );
@@ -122,7 +127,9 @@ function PublicFormPage() {
         <div className="glass-card max-w-md w-full p-8 text-center space-y-4">
           <CheckCircle2 className="w-14 h-14 text-success mx-auto" />
           <h1 className="text-2xl font-semibold">Formulario recebido</h1>
-          <p className="text-sm text-muted-foreground">Obrigado. Suas respostas foram enviadas com sucesso.</p>
+          <p className="text-sm text-muted-foreground">
+            Obrigado. Suas respostas foram enviadas com sucesso.
+          </p>
         </div>
       </div>
     );
@@ -136,16 +143,18 @@ function PublicFormPage() {
             {formTemplate.type === "contractual" ? "Formulario contratual" : "Briefing"}
           </p>
           <h1 className="text-2xl font-semibold mt-2">{formTemplate.name}</h1>
-          <p className="text-sm text-muted-foreground mt-1">Preencha os campos abaixo para continuar seu onboarding.</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Preencha os campos abaixo para continuar seu onboarding.
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {formTemplate.fields.map(field => (
+          {formTemplate.fields.map((field) => (
             <PublicField
               key={field.id}
               field={field}
               value={values[field.id] ?? ""}
-              onChange={value => setValues(prev => ({ ...prev, [field.id]: value }))}
+              onChange={(value) => setValues((prev) => ({ ...prev, [field.id]: value }))}
               disabled={submitting}
             />
           ))}
@@ -180,7 +189,7 @@ function PublicField({
         <Textarea
           id={field.id}
           value={value}
-          onChange={event => onChange(event.target.value)}
+          onChange={(event) => onChange(event.target.value)}
           placeholder={field.placeholder}
           disabled={disabled}
           required={field.required}
@@ -190,14 +199,16 @@ function PublicField({
         <select
           id={field.id}
           value={value}
-          onChange={event => onChange(event.target.value)}
+          onChange={(event) => onChange(event.target.value)}
           disabled={disabled}
           required={field.required}
           className="h-10 w-full rounded-md border border-input bg-white/5 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <option value="">{field.placeholder || "Selecione..."}</option>
-          {(field.options ?? []).map(option => (
-            <option key={option} value={option}>{option}</option>
+          {(field.options ?? []).map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
           ))}
         </select>
       ) : (
@@ -205,7 +216,7 @@ function PublicField({
           id={field.id}
           type={getInputType(field.type)}
           value={value}
-          onChange={event => onChange(event.target.value)}
+          onChange={(event) => onChange(event.target.value)}
           placeholder={field.placeholder}
           disabled={disabled}
           required={field.required}

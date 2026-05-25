@@ -1,19 +1,15 @@
-import { useState } from 'react';
-import { supabase } from '@/services/supabase';
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { FileText, ExternalLink, X } from 'lucide-react';
+import { useState } from "react";
+import { supabase } from "@/services/supabase";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { FileText, ExternalLink, X } from "lucide-react";
 
 /**
  * Upload de arquivos (DOCX / PDF) para o bucket `contracts`.
  * O componente devolve a URL pública do arquivo
  * que pode ser armazenada no contrato.
  */
-export function ContractFileUpload({
-  onUpload: setUrl,
-}: {
-  onUpload: (url: string) => void;
-}) {
+export function ContractFileUpload({ onUpload: setUrl }: { onUpload: (url: string) => void }) {
   const [uploading, setUploading] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
@@ -24,19 +20,17 @@ export function ContractFileUpload({
     setUploading(true);
     const storageFileName = `${Date.now()}_${file.name}`;
     const { data, error } = await supabase.storage
-      .from('contracts')
+      .from("contracts")
       .upload(storageFileName, file, { upsert: false });
     if (error) {
-      toast.error('Falha ao enviar arquivo');
+      toast.error("Falha ao enviar arquivo");
       console.error(error);
     } else {
-      const { data: urlData } = supabase.storage
-        .from('contracts')
-        .getPublicUrl(data.path);
+      const { data: urlData } = supabase.storage.from("contracts").getPublicUrl(data.path);
       setUrl(urlData.publicUrl);
       setFileUrl(urlData.publicUrl);
       setFileName(file.name);
-      toast.success('Arquivo enviado');
+      toast.success("Arquivo enviado");
     }
     setUploading(false);
   };
@@ -44,7 +38,7 @@ export function ContractFileUpload({
   const handleRemove = () => {
     setFileName(null);
     setFileUrl(null);
-    setUrl('');
+    setUrl("");
   };
 
   return (
@@ -61,7 +55,12 @@ export function ContractFileUpload({
         <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
           <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
           <span className="flex-1 truncate text-sm">{fileName}</span>
-          <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:opacity-80">
+          <a
+            href={fileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:opacity-80"
+          >
             <ExternalLink className="h-4 w-4" />
           </a>
           <button onClick={handleRemove} className="text-muted-foreground hover:text-destructive">
@@ -71,7 +70,7 @@ export function ContractFileUpload({
       ) : (
         <label htmlFor="contract-file-upload" className="inline-block">
           <Button disabled={uploading} variant="outline" asChild>
-            <span>{uploading ? 'Enviando...' : 'Selecionar arquivo (PDF/DOCX)'}</span>
+            <span>{uploading ? "Enviando..." : "Selecionar arquivo (PDF/DOCX)"}</span>
           </Button>
         </label>
       )}

@@ -1,6 +1,6 @@
 // ─── Fluxos ─────────────────────────────────────────────────────────────────
 
-export type FlowStepStatus = 'configured' | 'partial' | 'pending';
+export type FlowStepStatus = "configured" | "partial" | "pending";
 
 export interface OnboardingFlowStep {
   id: string;
@@ -17,18 +17,18 @@ export interface OnboardingFlowStep {
 // ─── Formulários ─────────────────────────────────────────────────────────────
 
 export type FieldType =
-  | 'text'
-  | 'textarea'
-  | 'email'
-  | 'phone'
-  | 'cpf_cnpj'
-  | 'date'
-  | 'number'
-  | 'currency'
-  | 'select'
-  | 'multiselect'
-  | 'upload'
-  | 'url';
+  | "text"
+  | "textarea"
+  | "email"
+  | "phone"
+  | "cpf_cnpj"
+  | "date"
+  | "number"
+  | "currency"
+  | "select"
+  | "multiselect"
+  | "upload"
+  | "url";
 
 export interface FormField {
   id: string;
@@ -41,7 +41,7 @@ export interface FormField {
   options?: string[]; // para select/multiselect
 }
 
-export type FormType = 'contractual' | 'briefing';
+export type FormType = "contractual" | "briefing";
 
 export interface FormTemplate {
   id: string;
@@ -57,11 +57,11 @@ export interface FormTemplate {
 
 export interface Variable {
   id: string;
-  key: string;          // ex: nome_cliente
-  label: string;        // ex: Nome do Cliente
-  mockValue: string;    // ex: João Silva
-  usedIn: string[];     // ex: ['Mensagem de boas-vindas', 'Contrato']
-  isSystem: boolean;    // não pode ser deletada
+  key: string; // ex: nome_cliente
+  label: string; // ex: Nome do Cliente
+  mockValue: string; // ex: João Silva
+  usedIn: string[]; // ex: ['Mensagem de boas-vindas', 'Contrato']
+  isSystem: boolean; // não pode ser deletada
 }
 
 // ─── Mensagens ────────────────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ export interface OnboardingMessage {
 
 // ─── Simulação ────────────────────────────────────────────────────────────────
 
-export type SimLogStatus = 'waiting' | 'running' | 'done' | 'skipped' | 'error';
+export type SimLogStatus = "waiting" | "running" | "done" | "skipped" | "error";
 
 export interface SimulationLog {
   stepId: string;

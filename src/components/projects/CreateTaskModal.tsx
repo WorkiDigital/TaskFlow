@@ -14,7 +14,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { TeamMember } from "@/services/teamService";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CreateTaskModalProps {
   open: boolean;
@@ -26,7 +32,15 @@ interface CreateTaskModalProps {
   members: TeamMember[];
 }
 
-export function CreateTaskModal({ open, onOpenChange, projectId, onCreate, defaultStatus, defaultDueDate, members }: CreateTaskModalProps) {
+export function CreateTaskModal({
+  open,
+  onOpenChange,
+  projectId,
+  onCreate,
+  defaultStatus,
+  defaultDueDate,
+  members,
+}: CreateTaskModalProps) {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     title: "",
@@ -59,7 +73,7 @@ export function CreateTaskModal({ open, onOpenChange, projectId, onCreate, defau
 
     setLoading(true);
     try {
-      const member = members.find(m => (m.full_name || m.email) === form.assignee);
+      const member = members.find((m) => (m.full_name || m.email) === form.assignee);
       const created = await createProjectTask({
         project_id: projectId,
         title: form.title,
@@ -73,12 +87,12 @@ export function CreateTaskModal({ open, onOpenChange, projectId, onCreate, defau
       const newTask: ProjectTask = {
         id: created.id,
         projectId,
-        columnId: mockProjectColumns.find(c => c.status === form.status)?.id || "col-1",
+        columnId: mockProjectColumns.find((c) => c.status === form.status)?.id || "col-1",
         status: form.status,
         title: created.title,
-        description: created.description ?? '',
+        description: created.description ?? "",
         assignee: form.assignee,
-        dueDate: created.due_date ?? '',
+        dueDate: created.due_date ?? "",
         priority: form.priority,
         checklist: [],
         comments: [],
@@ -89,7 +103,14 @@ export function CreateTaskModal({ open, onOpenChange, projectId, onCreate, defau
       onCreate(newTask);
       toast.success("Tarefa criada com sucesso!");
       onOpenChange(false);
-      setForm({ title: "", description: "", status: "backlog", priority: "medium", assignee: "", dueDate: "" });
+      setForm({
+        title: "",
+        description: "",
+        status: "backlog",
+        priority: "medium",
+        assignee: "",
+        dueDate: "",
+      });
     } catch (err) {
       toast.error("Erro ao criar tarefa: " + String(err));
     } finally {
@@ -102,18 +123,18 @@ export function CreateTaskModal({ open, onOpenChange, projectId, onCreate, defau
       <DialogContent className="glass-card border-border sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Nova Tarefa</DialogTitle>
-          <DialogDescription>
-            Adicione uma nova tarefa ao quadro atual.
-          </DialogDescription>
+          <DialogDescription>Adicione uma nova tarefa ao quadro atual.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
-            <Label>Título <span className="text-destructive">*</span></Label>
-            <Input 
+            <Label>
+              Título <span className="text-destructive">*</span>
+            </Label>
+            <Input
               required
               value={form.title}
-              onChange={e => setForm({...form, title: e.target.value})}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
               placeholder="Ex: Criar artes para feed"
               className="bg-background/50"
             />
@@ -121,9 +142,9 @@ export function CreateTaskModal({ open, onOpenChange, projectId, onCreate, defau
 
           <div className="space-y-2">
             <Label>Descrição</Label>
-            <Textarea 
+            <Textarea
               value={form.description}
-              onChange={e => setForm({...form, description: e.target.value})}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="Detalhes da entrega..."
               className="bg-background/50 resize-none h-20"
             />
@@ -132,20 +153,28 @@ export function CreateTaskModal({ open, onOpenChange, projectId, onCreate, defau
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select value={form.status} onValueChange={(v: TaskStatus) => setForm({...form, status: v})}>
+              <Select
+                value={form.status}
+                onValueChange={(v: TaskStatus) => setForm({ ...form, status: v })}
+              >
                 <SelectTrigger className="bg-background/50">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="glass-card">
-                  {mockProjectColumns.map(c => (
-                    <SelectItem key={c.status} value={c.status}>{c.title}</SelectItem>
+                  {mockProjectColumns.map((c) => (
+                    <SelectItem key={c.status} value={c.status}>
+                      {c.title}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label>Prioridade</Label>
-              <Select value={form.priority} onValueChange={(v: TaskPriority) => setForm({...form, priority: v})}>
+              <Select
+                value={form.priority}
+                onValueChange={(v: TaskPriority) => setForm({ ...form, priority: v })}
+              >
                 <SelectTrigger className="bg-background/50">
                   <SelectValue />
                 </SelectTrigger>
@@ -161,29 +190,36 @@ export function CreateTaskModal({ open, onOpenChange, projectId, onCreate, defau
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Responsável <span className="text-destructive">*</span></Label>
-              <Select value={form.assignee} onValueChange={(v) => setForm({...form, assignee: v})}>
+              <Label>
+                Responsável <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={form.assignee}
+                onValueChange={(v) => setForm({ ...form, assignee: v })}
+              >
                 <SelectTrigger className="bg-background/50">
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent className="glass-card">
-                  {members.map(m => (
+                  {members.map((m) => (
                     <SelectItem key={m.id} value={m.full_name || m.email}>
                       {m.full_name || m.email}
                     </SelectItem>
                   ))}
                   {members.length === 0 && (
-                    <SelectItem value="Internal" disabled>Sem membros</SelectItem>
+                    <SelectItem value="Internal" disabled>
+                      Sem membros
+                    </SelectItem>
                   )}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label>Prazo</Label>
-              <Input 
+              <Input
                 type="date"
                 value={form.dueDate}
-                onChange={e => setForm({...form, dueDate: e.target.value})}
+                onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
                 className="bg-background/50"
               />
             </div>

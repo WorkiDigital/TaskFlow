@@ -15,12 +15,17 @@ interface ConnectedGroupsManagerProps {
   onSetDefaultInternal: (groupId: string) => void;
 }
 
-export function ConnectedGroupsManager({ groups, connectionStatus, onSync, onSetDefaultInternal }: ConnectedGroupsManagerProps) {
+export function ConnectedGroupsManager({
+  groups,
+  connectionStatus,
+  onSync,
+  onSetDefaultInternal,
+}: ConnectedGroupsManagerProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const isConnected = connectionStatus === 'connected';
+  const isConnected = connectionStatus === "connected";
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -28,7 +33,9 @@ export function ConnectedGroupsManager({ groups, connectionStatus, onSync, onSet
       await onSync();
       toast.success("Grupos sincronizados com sucesso!");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel sincronizar os grupos.");
+      toast.error(
+        error instanceof Error ? error.message : "Nao foi possivel sincronizar os grupos.",
+      );
     } finally {
       setIsSyncing(false);
     }
@@ -41,9 +48,8 @@ export function ConnectedGroupsManager({ groups, connectionStatus, onSync, onSet
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const filteredGroups = groups.filter(g => 
-    g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    g.jid.includes(searchTerm)
+  const filteredGroups = groups.filter(
+    (g) => g.name.toLowerCase().includes(searchTerm.toLowerCase()) || g.jid.includes(searchTerm),
   );
 
   return (
@@ -55,9 +61,9 @@ export function ConnectedGroupsManager({ groups, connectionStatus, onSync, onSet
             Mapeie os grupos disponíveis para uso nas automações.
           </p>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={handleSync} 
+        <Button
+          variant="outline"
+          onClick={handleSync}
           disabled={!isConnected || isSyncing}
           className="gap-2 bg-white/5 border-white/10 shrink-0"
         >
@@ -68,8 +74,8 @@ export function ConnectedGroupsManager({ groups, connectionStatus, onSync, onSet
 
       <div className="relative mb-4">
         <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input 
-          placeholder="Buscar por nome ou JID..." 
+        <Input
+          placeholder="Buscar por nome ou JID..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-9 bg-black/20 border-white/10"
@@ -87,8 +93,11 @@ export function ConnectedGroupsManager({ groups, connectionStatus, onSync, onSet
             <p>Nenhum grupo encontrado com este filtro.</p>
           </div>
         ) : (
-          filteredGroups.map(group => (
-            <div key={group.id} className="p-4 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 transition-colors group">
+          filteredGroups.map((group) => (
+            <div
+              key={group.id}
+              className="p-4 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 transition-colors group"
+            >
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2 font-medium">
                   {group.name}
@@ -96,22 +105,32 @@ export function ConnectedGroupsManager({ groups, connectionStatus, onSync, onSet
                     <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
                   )}
                 </div>
-                <Badge variant="outline" className={cn(
-                  "text-[10px] uppercase font-semibold border-transparent",
-                  group.type === 'internal' ? 'bg-blue-500/10 text-blue-500' :
-                  group.type === 'client' ? 'bg-emerald-500/10 text-emerald-500' :
-                  'bg-white/10 text-muted-foreground'
-                )}>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-[10px] uppercase font-semibold border-transparent",
+                    group.type === "internal"
+                      ? "bg-blue-500/10 text-blue-500"
+                      : group.type === "client"
+                        ? "bg-emerald-500/10 text-emerald-500"
+                        : "bg-white/10 text-muted-foreground",
+                  )}
+                >
                   {group.type}
                 </Badge>
               </div>
-              
+
               <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
-                <div className="flex items-center gap-1 font-mono bg-black/20 px-2 py-0.5 rounded cursor-pointer hover:text-foreground transition-colors"
-                     onClick={() => copyToClipboard(group.jid)}
-                     title="Copiar JID"
+                <div
+                  className="flex items-center gap-1 font-mono bg-black/20 px-2 py-0.5 rounded cursor-pointer hover:text-foreground transition-colors"
+                  onClick={() => copyToClipboard(group.jid)}
+                  title="Copiar JID"
                 >
-                  {copiedId === group.jid ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                  {copiedId === group.jid ? (
+                    <Check className="w-3 h-3 text-emerald-500" />
+                  ) : (
+                    <Copy className="w-3 h-3" />
+                  )}
                   {group.jid}
                 </div>
                 <div className="flex items-center gap-1">
@@ -121,10 +140,10 @@ export function ConnectedGroupsManager({ groups, connectionStatus, onSync, onSet
               </div>
 
               <div className="flex items-center gap-2 pt-3 border-t border-white/5">
-                {group.type === 'internal' && !group.isDefaultInternal && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                {group.type === "internal" && !group.isDefaultInternal && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => onSetDefaultInternal(group.id)}
                     className="h-7 text-xs gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
@@ -132,7 +151,11 @@ export function ConnectedGroupsManager({ groups, connectionStatus, onSync, onSet
                   </Button>
                 )}
                 <div className="text-[10px] text-muted-foreground ml-auto">
-                  Sinc: {new Date(group.lastSyncAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                  Sinc:{" "}
+                  {new Date(group.lastSyncAt).toLocaleTimeString("pt-BR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </div>
               </div>
             </div>

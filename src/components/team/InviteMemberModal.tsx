@@ -1,9 +1,22 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { teamService, AgencyRole } from "@/services/teamService";
 import { toast } from "sonner";
 import { Loader2, Copy, Check } from "lucide-react";
@@ -16,21 +29,22 @@ interface InviteMemberModalProps {
 
 export function InviteMemberModal({ open, onOpenChange, onSuccess }: InviteMemberModalProps) {
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<'admin' | 'manager' | 'team' | 'client'>("team");
+  const [role, setRole] = useState<"admin" | "manager" | "team" | "client">("team");
   const [department, setDepartment] = useState("");
   const [jobTitle, setJobTitle] = useState("");
   const [roles, setRoles] = useState<AgencyRole[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Success state for displaying copyable link
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (open) {
-      teamService.getAgencyRoles()
+      teamService
+        .getAgencyRoles()
         .then(setRoles)
-        .catch(err => console.error("Erro ao carregar cargos:", err));
+        .catch((err) => console.error("Erro ao carregar cargos:", err));
       setGeneratedLink(null);
       setCopied(false);
     }
@@ -48,14 +62,14 @@ export function InviteMemberModal({ open, onOpenChange, onSuccess }: InviteMembe
       const finalJobTitle = jobTitle;
 
       const result = await teamService.inviteMember(
-        email, 
-        role, 
+        email,
+        role,
         department || undefined,
-        finalJobTitle || undefined
+        finalJobTitle || undefined,
       );
 
       toast.success("Convite criado com sucesso!");
-      
+
       // Generate invite link to copy
       const token = result.inviteToken || result.invite?.token;
       if (token) {
@@ -88,12 +102,15 @@ export function InviteMemberModal({ open, onOpenChange, onSuccess }: InviteMembe
   };
 
   return (
-    <Dialog open={open} onOpenChange={(val) => {
-      onOpenChange(val);
-      if (!val) {
-        setGeneratedLink(null);
-      }
-    }}>
+    <Dialog
+      open={open}
+      onOpenChange={(val) => {
+        onOpenChange(val);
+        if (!val) {
+          setGeneratedLink(null);
+        }
+      }}
+    >
       <DialogContent className="bg-background border-border sm:max-w-md">
         {generatedLink ? (
           <div className="space-y-4 py-4 text-center">
@@ -103,15 +120,16 @@ export function InviteMemberModal({ open, onOpenChange, onSuccess }: InviteMembe
             <DialogHeader>
               <DialogTitle className="text-center">Convite Criado!</DialogTitle>
               <DialogDescription className="text-center">
-                O convite foi registrado no sistema. Envie o link abaixo para o novo membro realizar o cadastro:
+                O convite foi registrado no sistema. Envie o link abaixo para o novo membro realizar
+                o cadastro:
               </DialogDescription>
             </DialogHeader>
 
             <div className="flex items-center gap-2 mt-4">
-              <Input 
-                value={generatedLink} 
-                readOnly 
-                className="bg-secondary/30 text-xs font-mono select-all h-9" 
+              <Input
+                value={generatedLink}
+                readOnly
+                className="bg-secondary/30 text-xs font-mono select-all h-9"
               />
               <Button size="icon" onClick={handleCopy} className="h-9 w-9 shrink-0">
                 {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
@@ -135,12 +153,12 @@ export function InviteMemberModal({ open, onOpenChange, onSuccess }: InviteMembe
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="invite-email">E-mail do Membro</Label>
-                <Input 
+                <Input
                   id="invite-email"
                   type="email"
-                  placeholder="membro@agencia.com" 
+                  placeholder="membro@agencia.com"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
 
@@ -159,14 +177,14 @@ export function InviteMemberModal({ open, onOpenChange, onSuccess }: InviteMembe
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="invite-department">Departamento</Label>
-                  <Input 
+                  <Input
                     id="invite-department"
-                    placeholder="Ex: Comercial, Tráfego" 
+                    placeholder="Ex: Comercial, Tráfego"
                     value={department}
-                    onChange={e => setDepartment(e.target.value)}
+                    onChange={(e) => setDepartment(e.target.value)}
                   />
                 </div>
               </div>
@@ -187,22 +205,41 @@ export function InviteMemberModal({ open, onOpenChange, onSuccess }: InviteMembe
                     <SelectItem value="Editor de Vídeo">Editor de Vídeo</SelectItem>
                     <SelectItem value="Desenvolvedor">Desenvolvedor</SelectItem>
                     <SelectItem value="Financeiro">Financeiro</SelectItem>
-                    {roles.filter(r => !["Atendimento", "Gestor de Projeto", "Gestor de Tráfego", "Designer", "Copywriter", "Social Media", "Editor de Vídeo", "Desenvolvedor", "Financeiro"].includes(r.name)).map(r => (
-                      <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
-                    ))}
+                    {roles
+                      .filter(
+                        (r) =>
+                          ![
+                            "Atendimento",
+                            "Gestor de Projeto",
+                            "Gestor de Tráfego",
+                            "Designer",
+                            "Copywriter",
+                            "Social Media",
+                            "Editor de Vídeo",
+                            "Desenvolvedor",
+                            "Financeiro",
+                          ].includes(r.name),
+                      )
+                      .map((r) => (
+                        <SelectItem key={r.id} value={r.name}>
+                          {r.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 {/* Permite digitar caso não queira do Select */}
-                <Input 
-                  placeholder="Ou digite um cargo customizado..." 
+                <Input
+                  placeholder="Ou digite um cargo customizado..."
                   value={jobTitle}
-                  onChange={e => setJobTitle(e.target.value)}
+                  onChange={(e) => setJobTitle(e.target.value)}
                   className="mt-1 h-8 text-xs"
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isLoading}>Cancelar</Button>
+              <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isLoading}>
+                Cancelar
+              </Button>
               <Button onClick={handleInvite} disabled={isLoading} className="w-[120px]">
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar Convite"}
               </Button>

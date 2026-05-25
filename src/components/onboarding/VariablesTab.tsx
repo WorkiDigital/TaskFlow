@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { Plus, Trash2, Pencil, Check, X, Shield, Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
-import type { Variable } from '@/data/onboardingTypes';
+import { useState } from "react";
+import { Plus, Trash2, Pencil, Check, X, Shield, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+import type { Variable } from "@/data/onboardingTypes";
 import {
   Dialog,
   DialogContent,
@@ -13,29 +13,35 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 
 interface VariablesTabProps {
   variables: Variable[];
-  onAdd: (v: Omit<Variable, 'id'>) => void;
+  onAdd: (v: Omit<Variable, "id">) => void;
   onUpdate: (id: string, patch: Partial<Variable>) => void;
   onDelete: (id: string) => void;
 }
 
 export function VariablesTab({ variables, onAdd, onUpdate, onDelete }: VariablesTabProps) {
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [newVar, setNewVar] = useState({ key: '', label: '', mockValue: '' });
-  const [editValues, setEditValues] = useState<{ label: string; mockValue: string }>({ label: '', mockValue: '' });
+  const [newVar, setNewVar] = useState({ key: "", label: "", mockValue: "" });
+  const [editValues, setEditValues] = useState<{ label: string; mockValue: string }>({
+    label: "",
+    mockValue: "",
+  });
 
-  const filtered = variables.filter(v =>
-    !search || v.key.includes(search.toLowerCase()) || v.label.toLowerCase().includes(search.toLowerCase())
+  const filtered = variables.filter(
+    (v) =>
+      !search ||
+      v.key.includes(search.toLowerCase()) ||
+      v.label.toLowerCase().includes(search.toLowerCase()),
   );
 
-  const systemVars = filtered.filter(v => v.isSystem);
-  const customVars = filtered.filter(v => !v.isSystem);
+  const systemVars = filtered.filter((v) => v.isSystem);
+  const customVars = filtered.filter((v) => !v.isSystem);
 
   const startEdit = (v: Variable) => {
     setEditingId(v.id);
@@ -49,11 +55,11 @@ export function VariablesTab({ variables, onAdd, onUpdate, onDelete }: Variables
 
   const handleAdd = () => {
     if (!newVar.key.trim() || !newVar.label.trim()) return;
-    const key = newVar.key.replace(/[^a-z0-9_]/gi, '_').toLowerCase();
+    const key = newVar.key.replace(/[^a-z0-9_]/gi, "_").toLowerCase();
     onAdd({ key, label: newVar.label, mockValue: newVar.mockValue, usedIn: [], isSystem: false });
-    setNewVar({ key: '', label: '', mockValue: '' });
+    setNewVar({ key: "", label: "", mockValue: "" });
     setShowAdd(false);
-    console.log('[VariableManager] new variable added:', key);
+    console.log("[VariableManager] new variable added:", key);
   };
 
   return (
@@ -64,7 +70,7 @@ export function VariablesTab({ variables, onAdd, onUpdate, onDelete }: Variables
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar variável..."
             className="pl-9"
           />
@@ -83,7 +89,8 @@ export function VariablesTab({ variables, onAdd, onUpdate, onDelete }: Variables
         <div>
           <p className="text-sm font-medium text-foreground">Como usar variáveis</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Insira <code className="bg-white/10 px-1 rounded text-primary">{'{{chave}}'}</code> em mensagens, contratos e descrições de grupos para inserir valores dinâmicos.
+            Insira <code className="bg-white/10 px-1 rounded text-primary">{"{{chave}}"}</code> em
+            mensagens, contratos e descrições de grupos para inserir valores dinâmicos.
           </p>
         </div>
       </div>
@@ -98,10 +105,10 @@ export function VariablesTab({ variables, onAdd, onUpdate, onDelete }: Variables
           editingId={editingId}
           editValues={editValues}
           onStartEdit={startEdit}
-          onEditChange={p => setEditValues(prev => ({ ...prev, ...p }))}
+          onEditChange={(p) => setEditValues((prev) => ({ ...prev, ...p }))}
           onSaveEdit={saveEdit}
           onCancelEdit={() => setEditingId(null)}
-          onDelete={id => setDeleteId(id)}
+          onDelete={(id) => setDeleteId(id)}
         />
       )}
 
@@ -114,10 +121,10 @@ export function VariablesTab({ variables, onAdd, onUpdate, onDelete }: Variables
           editingId={editingId}
           editValues={editValues}
           onStartEdit={startEdit}
-          onEditChange={p => setEditValues(prev => ({ ...prev, ...p }))}
+          onEditChange={(p) => setEditValues((prev) => ({ ...prev, ...p }))}
           onSaveEdit={saveEdit}
           onCancelEdit={() => setEditingId(null)}
-          onDelete={id => setDeleteId(id)}
+          onDelete={(id) => setDeleteId(id)}
         />
       )}
 
@@ -132,20 +139,31 @@ export function VariablesTab({ variables, onAdd, onUpdate, onDelete }: Variables
         <DialogContent className="bg-popover border-border sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Nova Variável</DialogTitle>
-            <DialogDescription>Crie uma variável para usar em mensagens e documentos.</DialogDescription>
+            <DialogDescription>
+              Crie uma variável para usar em mensagens e documentos.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Chave da variável *</Label>
               <div className="flex items-center gap-1">
-                <span className="text-muted-foreground text-sm px-2 py-2 bg-white/5 border border-border rounded-l-xl border-r-0">{'{{'}</span>
+                <span className="text-muted-foreground text-sm px-2 py-2 bg-white/5 border border-border rounded-l-xl border-r-0">
+                  {"{{"}
+                </span>
                 <Input
                   value={newVar.key}
-                  onChange={e => setNewVar(p => ({ ...p, key: e.target.value.replace(/[^a-z0-9_]/gi, '_').toLowerCase() }))}
+                  onChange={(e) =>
+                    setNewVar((p) => ({
+                      ...p,
+                      key: e.target.value.replace(/[^a-z0-9_]/gi, "_").toLowerCase(),
+                    }))
+                  }
                   placeholder="nome_variavel"
                   className="rounded-none border-x-0"
                 />
-                <span className="text-muted-foreground text-sm px-2 py-2 bg-white/5 border border-border rounded-r-xl border-l-0">{'}}'}</span>
+                <span className="text-muted-foreground text-sm px-2 py-2 bg-white/5 border border-border rounded-r-xl border-l-0">
+                  {"}}"}
+                </span>
               </div>
               <p className="text-xs text-muted-foreground">Somente letras, números e underscore</p>
             </div>
@@ -153,7 +171,7 @@ export function VariablesTab({ variables, onAdd, onUpdate, onDelete }: Variables
               <Label>Label (nome amigável) *</Label>
               <Input
                 value={newVar.label}
-                onChange={e => setNewVar(p => ({ ...p, label: e.target.value }))}
+                onChange={(e) => setNewVar((p) => ({ ...p, label: e.target.value }))}
                 placeholder="Ex: Nome do Responsável"
               />
             </div>
@@ -161,20 +179,24 @@ export function VariablesTab({ variables, onAdd, onUpdate, onDelete }: Variables
               <Label>Valor mockado para preview</Label>
               <Input
                 value={newVar.mockValue}
-                onChange={e => setNewVar(p => ({ ...p, mockValue: e.target.value }))}
+                onChange={(e) => setNewVar((p) => ({ ...p, mockValue: e.target.value }))}
                 placeholder="Ex: Carlos Silva"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowAdd(false)}>Cancelar</Button>
-            <Button onClick={handleAdd} disabled={!newVar.key || !newVar.label}>Criar variável</Button>
+            <Button variant="ghost" onClick={() => setShowAdd(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleAdd} disabled={!newVar.key || !newVar.label}>
+              Criar variável
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Dialog: confirmar exclusão */}
-      <Dialog open={!!deleteId} onOpenChange={open => !open && setDeleteId(null)}>
+      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <DialogContent className="bg-popover border-border sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Excluir variável?</DialogTitle>
@@ -183,8 +205,18 @@ export function VariablesTab({ variables, onAdd, onUpdate, onDelete }: Variables
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setDeleteId(null)}>Cancelar</Button>
-            <Button variant="destructive" onClick={() => { if (deleteId) { onDelete(deleteId); setDeleteId(null); } }}>
+            <Button variant="ghost" onClick={() => setDeleteId(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (deleteId) {
+                  onDelete(deleteId);
+                  setDeleteId(null);
+                }
+              }}
+            >
               Excluir
             </Button>
           </DialogFooter>
@@ -211,8 +243,17 @@ interface VariableGroupProps {
 }
 
 function VariableGroup({
-  title, description, icon, variables,
-  editingId, editValues, onStartEdit, onEditChange, onSaveEdit, onCancelEdit, onDelete,
+  title,
+  description,
+  icon,
+  variables,
+  editingId,
+  editValues,
+  onStartEdit,
+  onEditChange,
+  onSaveEdit,
+  onCancelEdit,
+  onDelete,
 }: VariableGroupProps) {
   return (
     <div>
@@ -222,12 +263,15 @@ function VariableGroup({
           <p className="text-xs font-semibold text-foreground">{title}</p>
           <p className="text-[10px] text-muted-foreground">{description}</p>
         </div>
-        <Badge variant="outline" className="ml-auto text-[10px] border-border text-muted-foreground">
+        <Badge
+          variant="outline"
+          className="ml-auto text-[10px] border-border text-muted-foreground"
+        >
           {variables.length}
         </Badge>
       </div>
       <div className="glass-card overflow-hidden divide-y divide-border">
-        {variables.map(v => (
+        {variables.map((v) => (
           <VariableRow
             key={v.id}
             variable={v}
@@ -259,13 +303,22 @@ interface VariableRowProps {
 }
 
 function VariableRow({
-  variable, isEditing, editValues, onStartEdit, onEditChange, onSaveEdit, onCancelEdit, onDelete,
+  variable,
+  isEditing,
+  editValues,
+  onStartEdit,
+  onEditChange,
+  onSaveEdit,
+  onCancelEdit,
+  onDelete,
 }: VariableRowProps) {
   return (
-    <div className={cn(
-      'flex items-start gap-3 px-4 py-3 transition-all group',
-      isEditing && 'bg-primary/5'
-    )}>
+    <div
+      className={cn(
+        "flex items-start gap-3 px-4 py-3 transition-all group",
+        isEditing && "bg-primary/5",
+      )}
+    >
       {/* Chave */}
       <div className="shrink-0 w-48 pt-0.5">
         <code className="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded-md">
@@ -279,14 +332,14 @@ function VariableRow({
           <div className="space-y-1.5">
             <Input
               value={editValues.label}
-              onChange={e => onEditChange({ label: e.target.value })}
+              onChange={(e) => onEditChange({ label: e.target.value })}
               placeholder="Label"
               className="h-7 text-xs"
               autoFocus
             />
             <Input
               value={editValues.mockValue}
-              onChange={e => onEditChange({ mockValue: e.target.value })}
+              onChange={(e) => onEditChange({ mockValue: e.target.value })}
               placeholder="Valor mockado para preview"
               className="h-7 text-xs"
             />
@@ -299,8 +352,11 @@ function VariableRow({
             )}
             {variable.usedIn.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
-                {variable.usedIn.map(u => (
-                  <span key={u} className="text-[10px] bg-white/5 border border-border px-1.5 py-0.5 rounded-md text-muted-foreground">
+                {variable.usedIn.map((u) => (
+                  <span
+                    key={u}
+                    className="text-[10px] bg-white/5 border border-border px-1.5 py-0.5 rounded-md text-muted-foreground"
+                  >
                     {u}
                   </span>
                 ))}
@@ -314,20 +370,40 @@ function VariableRow({
       <div className="flex gap-1 shrink-0">
         {isEditing ? (
           <>
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-success hover:text-success" onClick={onSaveEdit}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-success hover:text-success"
+              onClick={onSaveEdit}
+            >
               <Check className="w-3.5 h-3.5" />
             </Button>
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" onClick={onCancelEdit}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-muted-foreground"
+              onClick={onCancelEdit}
+            >
               <X className="w-3.5 h-3.5" />
             </Button>
           </>
         ) : (
           <>
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity" onClick={onStartEdit}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={onStartEdit}
+            >
               <Pencil className="w-3.5 h-3.5" />
             </Button>
             {!variable.isSystem && (
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={onDelete}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={onDelete}
+              >
                 <Trash2 className="w-3.5 h-3.5" />
               </Button>
             )}

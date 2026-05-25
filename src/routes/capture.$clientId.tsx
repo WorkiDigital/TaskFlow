@@ -82,15 +82,18 @@ function CaptureForm() {
           endereco_cliente: { label: "Endereço completo", value: form.address },
           nome_projeto: { label: "Nome do projeto", value: `Onboarding ${form.name}` },
           valor_projeto: { label: "Valor do projeto", value: "0" },
-          prazo_projeto: { label: "Prazo de entrega", value: new Date().toISOString().split('T')[0] }
+          prazo_projeto: {
+            label: "Prazo de entrega",
+            value: new Date().toISOString().split("T")[0],
+          },
         };
 
         await onboardingService.submitPublicForm({
           formId: "form_contractual_default",
           clientId,
-          payload
+          payload,
         });
-        
+
         setSuccess(true);
       } catch (onbErr) {
         console.error("Error resuming onboarding:", onbErr);
@@ -128,7 +131,8 @@ function CaptureForm() {
           <CheckCircle2 className="w-16 h-16 text-success mx-auto mb-4" />
           <h1 className="text-2xl font-bold">Dados Recebidos!</h1>
           <p className="text-muted-foreground">
-            Obrigado, {form.name.split(" ")[0]}! Seus dados foram salvos com sucesso e nosso time já está preparando seu contrato.
+            Obrigado, {form.name.split(" ")[0]}! Seus dados foram salvos com sucesso e nosso time já
+            está preparando seu contrato.
           </p>
         </div>
       </div>
@@ -157,7 +161,7 @@ function CaptureForm() {
               className="bg-white/5"
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="cnpj_cpf">CNPJ / CPF</Label>
             <Input

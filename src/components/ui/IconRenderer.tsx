@@ -1,17 +1,17 @@
-import { 
-  Clipboard, 
-  Hourglass, 
-  FileText, 
-  Pen, 
-  MessageSquare, 
-  Users, 
-  Edit, 
-  PartyPopper, 
-  Bell, 
-  Check, 
+import {
+  Clipboard,
+  Hourglass,
+  FileText,
+  Pen,
+  MessageSquare,
+  Users,
+  Edit,
+  PartyPopper,
+  Bell,
+  Check,
   AlertTriangle,
-  type LucideProps
-} from 'lucide-react';
+  type LucideProps,
+} from "lucide-react";
 
 interface IconRendererProps extends LucideProps {
   icon: string;
@@ -29,12 +29,12 @@ const iconMap: Record<string, React.FC<LucideProps>> = {
   bell: Bell,
   check: Check,
   alert: AlertTriangle,
-  memo: FileText
+  memo: FileText,
 };
 
 export function IconRenderer({ icon, className, ...props }: IconRendererProps) {
-  const IconComponent = iconMap[icon?.toLowerCase() || ''];
-  
+  const IconComponent = iconMap[icon?.toLowerCase() || ""];
+
   if (IconComponent) {
     return <IconComponent className={className} {...props} />;
   }

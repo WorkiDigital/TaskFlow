@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
 export interface PublicAgencySettings {
   id?: string;
@@ -9,7 +9,7 @@ export interface PublicAgencySettings {
 }
 
 async function invokeSettings<T>(body: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase.functions.invoke<T>('agency-settings', { body });
+  const { data, error } = await supabase.functions.invoke<T>("agency-settings", { body });
 
   if (error) {
     throw new Error(error.message);
@@ -25,19 +25,19 @@ async function invokeSettings<T>(body: Record<string, unknown>): Promise<T> {
 
 export const settingsService = {
   async getSettings(): Promise<PublicAgencySettings> {
-    return invokeSettings<PublicAgencySettings>({ action: 'get_public' });
+    return invokeSettings<PublicAgencySettings>({ action: "get_public" });
   },
 
   async updateAutentiqueToken(token: string): Promise<PublicAgencySettings> {
     return invokeSettings<PublicAgencySettings>({
-      action: 'update_autentique_token',
+      action: "update_autentique_token",
       token,
     });
   },
 
   async updateEvolutionConfig(url: string, apiKey: string): Promise<PublicAgencySettings> {
     return invokeSettings<PublicAgencySettings>({
-      action: 'update_evolution_config',
+      action: "update_evolution_config",
       url,
       apiKey,
     });

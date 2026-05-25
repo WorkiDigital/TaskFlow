@@ -34,7 +34,7 @@ function AutomationsPage() {
   }, []);
 
   const handleSaveFlow = async (updatedFlow: AutomationFlow) => {
-    console.log('[Automations] Saving flow to Supabase...', updatedFlow);
+    console.log("[Automations] Saving flow to Supabase...", updatedFlow);
     try {
       await automationsService.saveFlow(updatedFlow);
       await fetchFlows(); // Refresh list after saving
@@ -48,17 +48,17 @@ function AutomationsPage() {
   if (editingFlow) {
     return (
       <div className="absolute inset-0 z-50 bg-[var(--color-background)]">
-        <AutomationBuilder 
-          flow={editingFlow} 
-          onSave={handleSaveFlow} 
-          onClose={() => setEditingFlow(null)} 
+        <AutomationBuilder
+          flow={editingFlow}
+          onSave={handleSaveFlow}
+          onClose={() => setEditingFlow(null)}
         />
       </div>
     );
   }
 
-  const activeFlows = flows.filter(f => f.status === 'active').length;
-  
+  const activeFlows = flows.filter((f) => f.status === "active").length;
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto w-full px-4 py-6 md:px-8 md:py-8">
       {/* Header */}
@@ -69,7 +69,7 @@ function AutomationsPage() {
             Monte fluxos personalizados para onboarding, contratos, briefing e WhatsApp
           </p>
         </div>
-        <Button 
+        <Button
           className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
           onClick={() => setEditingFlow(mockAutomationFlows[0])} // Use mock to create a new one until we build a flow generator
         >
@@ -87,7 +87,7 @@ function AutomationsPage() {
           </div>
           <p className="text-2xl font-semibold text-foreground">{activeFlows}</p>
         </div>
-        
+
         <div className="glass-card p-4 flex flex-col gap-1 border-white/5">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
             <Settings2 className="w-4 h-4" />
@@ -97,32 +97,39 @@ function AutomationsPage() {
             {flows.reduce((acc, flow) => acc + flow.steps.length, 0)}
           </p>
         </div>
-        
+
         <div className="glass-card p-4 flex flex-col gap-1 border-white/5">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
             <Play className="w-4 h-4" />
-            <span className="text-xs font-medium uppercase tracking-wider">Execuções simuladas</span>
+            <span className="text-xs font-medium uppercase tracking-wider">
+              Execuções simuladas
+            </span>
           </div>
           <p className="text-2xl font-semibold text-foreground">14</p>
         </div>
-        
+
         <div className="glass-card p-4 flex flex-col gap-1 border-white/5">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
             <Clock className="w-4 h-4" />
             <span className="text-xs font-medium uppercase tracking-wider">Última edição</span>
           </div>
-          <p className="text-2xl font-semibold text-foreground text-sm flex items-center h-full">Hoje, 14:30</p>
+          <p className="text-2xl font-semibold text-foreground text-sm flex items-center h-full">
+            Hoje, 14:30
+          </p>
         </div>
       </div>
 
       {/* Flows List */}
       <div className="space-y-4 mt-8">
-        <h3 className="text-lg font-medium">Meus Fluxos {isLoading && <span className="text-muted-foreground text-sm">(Carregando...)</span>}</h3>
-        
+        <h3 className="text-lg font-medium">
+          Meus Fluxos{" "}
+          {isLoading && <span className="text-muted-foreground text-sm">(Carregando...)</span>}
+        </h3>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {flows.map(flow => (
-            <button 
-              key={flow.id} 
+          {flows.map((flow) => (
+            <button
+              key={flow.id}
               onClick={() => setEditingFlow(flow)}
               className="glass-card p-5 flex flex-col border border-white/5 hover:border-white/10 transition-colors group text-left relative"
             >
@@ -134,31 +141,36 @@ function AutomationsPage() {
                   <MoreVertical className="w-4 h-4" />
                 </div>
               </div>
-              
+
               <h4 className="font-semibold text-foreground mb-1">{flow.name}</h4>
               <p className="text-xs text-muted-foreground mb-4 line-clamp-2">
-                Modo: {flow.mode.replace('_', ' ')} com {flow.steps.length} etapas.
+                Modo: {flow.mode.replace("_", " ")} com {flow.steps.length} etapas.
               </p>
-              
+
               <div className="mt-auto flex items-center justify-between pt-4 border-t border-white/5 w-full">
-                <Badge variant="outline" className={cn(
-                  "text-[10px] uppercase font-semibold border-transparent",
-                  flow.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' :
-                  flow.status === 'paused' ? 'bg-yellow-500/10 text-yellow-500' :
-                  'bg-white/10 text-muted-foreground'
-                )}>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-[10px] uppercase font-semibold border-transparent",
+                    flow.status === "active"
+                      ? "bg-emerald-500/10 text-emerald-500"
+                      : flow.status === "paused"
+                        ? "bg-yellow-500/10 text-yellow-500"
+                        : "bg-white/10 text-muted-foreground",
+                  )}
+                >
                   {flow.status}
                 </Badge>
-                
+
                 <span className="text-[10px] text-muted-foreground">
-                  Modificado: {new Date(flow.updatedAt).toLocaleDateString('pt-BR')}
+                  Modificado: {new Date(flow.updatedAt).toLocaleDateString("pt-BR")}
                 </span>
               </div>
             </button>
           ))}
-          
+
           {/* Create new card */}
-          <button 
+          <button
             onClick={() => setEditingFlow(mockAutomationFlows[0])}
             className="glass-card p-5 flex flex-col items-center justify-center border border-dashed border-white/10 hover:border-primary/50 hover:bg-white/5 transition-all gap-3 min-h-[200px] text-muted-foreground hover:text-foreground"
           >

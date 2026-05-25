@@ -141,17 +141,5 @@ ALTER TABLE onboarding_runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE onboarding_step_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE form_submissions ENABLE ROW LEVEL SECURITY;
 
--- Allow read/write for authenticated users on most tables for MVP
-CREATE POLICY "Enable all for authenticated users" ON agency_settings FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Enable all for authenticated users" ON users FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Enable all for authenticated users" ON clients FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Enable all for authenticated users" ON contract_templates FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Enable all for authenticated users" ON contracts FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Enable all for authenticated users" ON projects FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Enable all for authenticated users" ON project_columns FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Enable all for authenticated users" ON tasks FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Enable all for authenticated users" ON onboarding_workspace FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Enable read for authenticated users" ON onboarding_runs FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Enable read for authenticated users" ON onboarding_step_logs FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Enable insert for anon users" ON form_submissions FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "Enable read for authenticated users" ON form_submissions FOR SELECT TO authenticated USING (true);
+-- Production RLS is maintained in migrations. Do not add broad USING (true)
+-- policies here; see 20260525160237_harden_rls_grants.sql.

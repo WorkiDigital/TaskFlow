@@ -7,10 +7,13 @@ interface WhatsAppAutomationReadinessProps {
   groups: WhatsAppGroup[];
 }
 
-export function WhatsAppAutomationReadiness({ connectionStatus, groups }: WhatsAppAutomationReadinessProps) {
-  const isConnected = connectionStatus === 'connected';
-  const hasInternalGroup = groups.some(g => g.isDefaultInternal);
-  
+export function WhatsAppAutomationReadiness({
+  connectionStatus,
+  groups,
+}: WhatsAppAutomationReadinessProps) {
+  const isConnected = connectionStatus === "connected";
+  const hasInternalGroup = groups.some((g) => g.isDefaultInternal);
+
   // Mocks for other conditions that would be checked in a real app
   const hasWelcomeMessage = true;
   const hasContractMessage = false;
@@ -22,7 +25,7 @@ export function WhatsAppAutomationReadiness({ connectionStatus, groups }: WhatsA
     { label: "Mensagem de contrato configurada", met: hasContractMessage },
   ];
 
-  const allMet = conditions.every(c => c.met);
+  const allMet = conditions.every((c) => c.met);
 
   return (
     <GlassCard className="p-6">
@@ -46,13 +49,18 @@ export function WhatsAppAutomationReadiness({ connectionStatus, groups }: WhatsA
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {conditions.map((condition, idx) => (
-          <div key={idx} className="flex items-center gap-3 p-3 rounded-lg border border-white/5 bg-white/5">
+          <div
+            key={idx}
+            className="flex items-center gap-3 p-3 rounded-lg border border-white/5 bg-white/5"
+          >
             {condition.met ? (
               <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
             ) : (
               <div className="w-4 h-4 rounded-full border border-dashed border-muted-foreground/50 shrink-0" />
             )}
-            <span className={`text-sm ${condition.met ? 'text-foreground' : 'text-muted-foreground'}`}>
+            <span
+              className={`text-sm ${condition.met ? "text-foreground" : "text-muted-foreground"}`}
+            >
               {condition.label}
             </span>
           </div>
@@ -63,7 +71,8 @@ export function WhatsAppAutomationReadiness({ connectionStatus, groups }: WhatsA
         <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
           <p className="text-xs text-amber-500/90 flex items-center gap-2">
             <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-            As automações dependentes de WhatsApp podem ser bloqueadas até que estas pendências sejam resolvidas.
+            As automações dependentes de WhatsApp podem ser bloqueadas até que estas pendências
+            sejam resolvidas.
           </p>
         </div>
       )}

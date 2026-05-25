@@ -5,6 +5,9 @@ import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { authService } from "@/services/authService";
 
+import { CreateWorkspaceDialog } from "@/components/workspaces/CreateWorkspaceDialog";
+import { WorkspaceSettingsDialog } from "@/components/workspaces/WorkspaceSettingsDialog";
+
 export function AppLayout() {
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
@@ -12,8 +15,9 @@ export function AppLayout() {
   useEffect(() => {
     let mounted = true;
 
-    authService.getSession()
-      .then(session => {
+    authService
+      .getSession()
+      .then((session) => {
         if (!mounted) return;
         if (!session) {
           void navigate({ to: "/login", replace: true });
@@ -53,6 +57,8 @@ export function AppLayout() {
           </div>
         </main>
       </div>
+      <CreateWorkspaceDialog />
+      <WorkspaceSettingsDialog />
     </div>
   );
 }

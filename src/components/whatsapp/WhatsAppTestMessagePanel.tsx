@@ -16,14 +16,17 @@ interface WhatsAppTestMessagePanelProps {
   instanceName: string;
 }
 
-export function WhatsAppTestMessagePanel({ connectionStatus, instanceName }: WhatsAppTestMessagePanelProps) {
+export function WhatsAppTestMessagePanel({
+  connectionStatus,
+  instanceName,
+}: WhatsAppTestMessagePanelProps) {
   const [target, setTarget] = useState("");
   const [message, setMessage] = useState("");
   const [linkPreview, setLinkPreview] = useState(true);
   const [mentionsEveryOne, setMentionsEveryOne] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
-  const isConnected = connectionStatus === 'connected';
+  const isConnected = connectionStatus === "connected";
 
   const handleSend = async () => {
     if (!target.trim() || !message.trim()) {
@@ -69,20 +72,20 @@ export function WhatsAppTestMessagePanel({ connectionStatus, instanceName }: Wha
         <div className="flex-1 space-y-4">
           <div className="space-y-1.5">
             <Label>Destino (Número ou JID)</Label>
-            <Input 
-              placeholder="Ex: 5511999999999 ou 12036...01@g.us" 
+            <Input
+              placeholder="Ex: 5511999999999 ou 12036...01@g.us"
               value={target}
-              onChange={e => setTarget(e.target.value)}
+              onChange={(e) => setTarget(e.target.value)}
               className="bg-black/20"
             />
           </div>
 
           <div className="space-y-1.5">
             <Label>Mensagem</Label>
-            <Textarea 
-              placeholder="Digite sua mensagem de teste..." 
+            <Textarea
+              placeholder="Digite sua mensagem de teste..."
               value={message}
-              onChange={e => setMessage(e.target.value)}
+              onChange={(e) => setMessage(e.target.value)}
               rows={4}
               className="bg-black/20 resize-none"
             />
@@ -91,21 +94,33 @@ export function WhatsAppTestMessagePanel({ connectionStatus, instanceName }: Wha
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 pt-2">
             <div className="flex items-center gap-2">
               <Switch checked={linkPreview} onCheckedChange={setLinkPreview} id="link-preview" />
-              <Label htmlFor="link-preview" className="text-xs font-normal cursor-pointer">Preview de Links</Label>
+              <Label htmlFor="link-preview" className="text-xs font-normal cursor-pointer">
+                Preview de Links
+              </Label>
             </div>
             <div className="flex items-center gap-2">
-              <Switch checked={mentionsEveryOne} onCheckedChange={setMentionsEveryOne} id="mention-all" />
-              <Label htmlFor="mention-all" className="text-xs font-normal cursor-pointer">Mencionar Todos</Label>
+              <Switch
+                checked={mentionsEveryOne}
+                onCheckedChange={setMentionsEveryOne}
+                id="mention-all"
+              />
+              <Label htmlFor="mention-all" className="text-xs font-normal cursor-pointer">
+                Mencionar Todos
+              </Label>
             </div>
           </div>
 
           <div className="pt-4 mt-auto">
-            <Button 
-              onClick={handleSend} 
-              disabled={isSending || !target.trim() || !message.trim()} 
+            <Button
+              onClick={handleSend}
+              disabled={isSending || !target.trim() || !message.trim()}
               className="w-full gap-2 bg-primary hover:bg-primary/90"
             >
-              {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              {isSending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
               {isSending ? "Enviando..." : "Enviar Teste"}
             </Button>
           </div>

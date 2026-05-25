@@ -14,10 +14,10 @@ export const authService = {
   },
 
   async signUp(email: string, password: string, options?: any) {
-    const { data, error } = await supabase.auth.signUp({ 
-      email, 
-      password, 
-      options 
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options,
     });
     if (error) throw error;
     return data;

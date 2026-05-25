@@ -55,6 +55,37 @@ function getSupabaseAdmin() {
   );
 }
 
+type AuthContext = {
+  userId: string;
+  agencyId: string;
+};
+
+function getBearerToken(req: Request) {
+  const header = req.headers.get("authorization") ?? "";
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match?.[1] ?? "";
+}
+
+async function getOptionalAuthContext(
+  req: Request,
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+): Promise<AuthContext | null> {
+  const token = getBearerToken(req);
+  if (!token) return null;
+
+  const { data: authData, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !authData.user) return null;
+
+  const { data: userRow } = await supabase
+    .from("users")
+    .select("agency_id")
+    .eq("id", authData.user.id)
+    .maybeSingle<{ agency_id: string | null }>();
+
+  if (!userRow?.agency_id) return null;
+  return { userId: authData.user.id, agencyId: userRow.agency_id };
+}
+
 function normalizePhone(value?: string | null) {
   return String(value ?? "").replace(/\D/g, "");
 }
@@ -236,6 +267,7 @@ serve(async (req) => {
   let pausedForForm = false;
 
   try {
+    const authContext = await getOptionalAuthContext(req, supabase);
     const body = await req.json();
     const {
       action,
@@ -262,6 +294,12 @@ serve(async (req) => {
     }
 
     if (!["start", "form_submitted"].includes(action)) throw new Error("Acao invalida para onboarding-execute.");
+    if (action === "start" && !authContext) {
+      return new Response(
+        JSON.stringify({ error: "Nao autenticado para iniciar onboarding." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 },
+      );
+    }
 
     const { data: workspaceRow, error: workspaceError } = await supabase
       .from("onboarding_workspace")
@@ -314,6 +352,18 @@ serve(async (req) => {
     if (clientError || !client) throw new Error("Cliente nao encontrado.");
 
     const agencyId = client.agency_id ?? null;
+    if (authContext && agencyId && authContext.agencyId !== agencyId) {
+      return new Response(
+        JSON.stringify({ error: "Cliente nao pertence a agencia do usuario autenticado." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 },
+      );
+    }
+    if (action === "start" && (!agencyId || authContext?.agencyId !== agencyId)) {
+      return new Response(
+        JSON.stringify({ error: "Sem permissao para iniciar onboarding deste cliente." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 },
+      );
+    }
 
     // Pause/resume: on form_submitted look for an existing awaiting_form run
     let run: { id: string; context: Record<string, unknown> } | null = null;
@@ -343,7 +393,7 @@ serve(async (req) => {
     if (!run) {
       const { data: newRun, error: runError } = await supabase
         .from("onboarding_runs")
-        .insert({ client_id: client.id, status: "running", context: runContext })
+        .insert({ client_id: client.id, agency_id: agencyId, status: "running", context: runContext })
         .select()
         .single();
       if (runError) throw runError;
