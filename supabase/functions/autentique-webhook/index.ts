@@ -50,6 +50,16 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  const webhookSecret = Deno.env.get("AUTENTIQUE_WEBHOOK_SECRET") ?? "";
+  if (webhookSecret) {
+    const provided = req.headers.get("x-webhook-secret") ?? new URL(req.url).searchParams.get("secret") ?? "";
+    if (provided !== webhookSecret) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401,
+      });
+    }
+  }
+
   const supabase = getSupabaseAdmin();
 
   try {
@@ -79,10 +89,25 @@ serve(async (req) => {
         updated_at: new Date().toISOString(),
       })
       .eq("autentique_document_id", documentId)
-      .select("id, client_id, agency_id")
-      .maybeSingle<{ id: string; client_id: string | null; agency_id: string | null }>();
+      .select("id, client_id, agency_id, deal_id")
+      .maybeSingle<{ id: string; client_id: string | null; agency_id: string | null; deal_id: string | null }>();
 
     if (contractError) throw contractError;
+
+    // Atualiza status do Deal e verifica o modo de início do onboarding
+    let shouldAutoStartOnboarding = false;
+    if (contract?.deal_id) {
+      const { data: deal } = await supabase
+        .from("client_deals")
+        .update({ status: "contract_signed", updated_at: new Date().toISOString() })
+        .eq("id", contract.deal_id)
+        .select("onboarding_start_mode")
+        .maybeSingle<{ onboarding_start_mode: string }>();
+
+      if (deal?.onboarding_start_mode === "automatic_after_signature") {
+        shouldAutoStartOnboarding = true;
+      }
+    }
 
     if (contract?.client_id) {
       const { data: run } = await supabase
@@ -118,6 +143,17 @@ serve(async (req) => {
           console.log("[AutentiqueWebhook] automation-execute disparado para agency:", contract.agency_id);
         } catch (automationErr) {
           console.error("[AutentiqueWebhook] Falha ao disparar automation-execute:", automationErr);
+        }
+
+        if (shouldAutoStartOnboarding) {
+          try {
+            await supabase.functions.invoke("onboarding-execute", {
+              body: { clientId: contract.client_id }
+            });
+            console.log("[AutentiqueWebhook] onboarding-execute auto-iniciado");
+          } catch (onboardingErr) {
+            console.error("[AutentiqueWebhook] Falha ao iniciar onboarding-execute:", onboardingErr);
+          }
         }
       }
     }

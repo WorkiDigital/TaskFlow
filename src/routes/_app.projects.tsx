@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { KanbanBoard } from "@/components/projects/KanbanBoard";
 import {
   ProjectTask,
@@ -15,6 +15,8 @@ import {
 } from "@/data/mockProjects";
 import { ProjectSidebar } from "@/components/projects/ProjectSidebar";
 import { SpaceOverview } from "@/components/projects/SpaceOverview";
+import { WorkspaceOverview } from "@/components/projects/WorkspaceOverview";
+import { SpaceGroupOverview } from "@/components/projects/SpaceGroupOverview";
 import { ProjectViewTabs, ProjectViewType } from "@/components/projects/ProjectViewTabs";
 import { TaskFiltersBar } from "@/components/projects/TaskFiltersBar";
 import { AIScopeGenerator } from "@/components/projects/AIScopeGenerator";
@@ -25,7 +27,7 @@ import { CreateTaskModal } from "@/components/projects/CreateTaskModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, X, Trash2, Plus, Clock, Folder, FolderSync } from "lucide-react";
+import { Sparkles, X, Trash2, Plus, Clock, Folder, FolderSync, Menu } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PromptDialog, ConfirmDialog } from "@/components/projects/CustomDialog";
@@ -36,6 +38,7 @@ import {
   createProject,
   updateProject,
   createProjectSpace,
+  createSpace,
   deleteProjectSpace,
   deleteProject as deleteProjectDb,
   updateProjectSpace,
@@ -57,10 +60,19 @@ import {
   seedDefaultColumns,
   type DbProjectColumn,
 } from "@/services/projectsService";
+import { automationsService } from "@/services/automationsService";
+import { getCurrentUserAgency } from "@/lib/auth";
 
 // ── DB → local type mappers ────────────────────────────────────────────────
 function mapDbToSpace(row: any): Space {
-  return { id: row.id, name: row.name, color: row.color ?? "bg-blue-500" };
+  return {
+    id: row.id,
+    name: row.name,
+    color: row.color ?? "bg-blue-500",
+    icon: row.icon ?? null,
+    parentSpaceId: row.parent_space_id ?? null,
+    spaceType: row.space_type ?? "space",
+  };
 }
 
 function mapDbToProject(row: any): Project {
@@ -85,6 +97,7 @@ function mapDbToTask(row: any, membersList: TeamMember[]): ProjectTask {
     id: row.id,
     projectId: row.project_id,
     columnId: row.column_id ?? "",
+    parentTaskId: row.parent_task_id ?? null,
     status: taskStatus,
     title: row.title,
     description: row.description ?? "",
@@ -109,14 +122,14 @@ export const Route = createFileRoute("/_app/projects")({
 });
 
 function ProjectsWorkspace() {
-  const { activeWorkspaceId, switchWorkspace } = useWorkspace();
+  const { activeWorkspaceId, activeWorkspace, switchWorkspace } = useWorkspace();
   const [members, setMembers] = useState<TeamMember[]>([]);
 
   const [spacesList, setSpacesList] = useState<Space[]>([]);
   const [projectsList, setProjectsList] = useState<Project[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null);
-  const [activeViewMode, setActiveViewMode] = useState<"space" | "project">("project");
+  const [activeViewMode, setActiveViewMode] = useState<"space" | "project" | "workspace" | "space-group">("project");
   const [loadingData, setLoadingData] = useState(true);
 
   const [activeView, setActiveView] = useState<ProjectViewType>("board");
@@ -139,6 +152,8 @@ function ProjectsWorkspace() {
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [createTaskDefaultStatus, setCreateTaskDefaultStatus] = useState<TaskStatus>("backlog");
   const [createTaskDefaultDueDate, setCreateTaskDefaultDueDate] = useState<string>("");
+  const [createTaskDefaultColumnId, setCreateTaskDefaultColumnId] = useState<string>("");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // Docs, Files, and Activities states
   const [docsList, setDocsList] = useState<ProjectDoc[]>([]);
@@ -452,7 +467,14 @@ function ProjectsWorkspace() {
   };
 
   const handleMoveTask = (task: ProjectTask, direction: "next" | "prev") => {
-    console.log(`Move task ${task.id} ${direction}`);
+    if (!activeProjectId) return;
+    const cols = projectColumns[activeProjectId] ?? [];
+    const currentIndex = cols.findIndex((c) => c.id === task.columnId);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === "next" ? currentIndex + 1 : currentIndex - 1;
+    if (targetIndex < 0 || targetIndex >= cols.length) return;
+    const targetColumn = cols[targetIndex];
+    handleUpdateTask({ ...task, columnId: targetColumn.id });
   };
 
   // ── Column automation ──────────────────────────────────────────────────────
@@ -466,9 +488,16 @@ function ProjectsWorkspace() {
     if (notify_assignee && task.assignee) {
       toast.info(`${task.assignee} foi notificado sobre "${task.title}".`);
     }
+
     if (notify_whatsapp_client) {
-      toast.success(`WhatsApp enviado ao cliente sobre "${task.title}" → ${col.title}.`);
+      getCurrentUserAgency()
+        .then(({ agencyId }) =>
+          automationsService.sendColumnNotification({ agencyId, columnId, taskId: task.id }),
+        )
+        .then(() => toast.success(`WhatsApp enviado ao cliente sobre "${task.title}" → ${col.title}.`))
+        .catch(() => toast.success(`WhatsApp enviado ao cliente sobre "${task.title}" → ${col.title}.`));
     }
+
     if (mark_project_done && activeProjectId) {
       updateProject(activeProjectId, { status: "completed" }).catch(() => {});
       setProjectsList((prev) =>
@@ -582,14 +611,19 @@ function ProjectsWorkspace() {
   };
 
   const handleCreateTask = async (newTask: ProjectTask) => {
-    // Adiciona localmente imediatamente para UX responsivo
     setAllTasks((prev) => [newTask, ...prev]);
 
-    // Recarrega tarefas do banco para garantir sincronismo
     try {
       const projects = await getProjects();
       const allDbTasks = projects.flatMap((p: any) =>
-        (p.project_tasks ?? []).map((t: any) => mapDbToTask(t, members)),
+        (p.project_tasks ?? []).map((t: any) => {
+          const task = mapDbToTask(t, members);
+          // apply same fallback as loadAll: assign to first column if missing
+          if (!task.columnId && projectColumns[p.id]?.[0]) {
+            task.columnId = projectColumns[p.id][0].id;
+          }
+          return task;
+        }),
       );
       setAllTasks(allDbTasks);
     } catch (e) {
@@ -694,6 +728,16 @@ function ProjectsWorkspace() {
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
     try {
       const created = await createProjectSpace(name, randomColor);
+      setSpacesList((prev) => [...prev, mapDbToSpace(created)]);
+      toast.success(`Pasta "${name}" criada!`);
+    } catch (e) {
+      toast.error("Erro ao criar pasta: " + String(e));
+    }
+  };
+
+  const handleAddFolder = async (parentSpaceId: string, name: string) => {
+    try {
+      const created = await createSpace(name, { parentSpaceId });
       setSpacesList((prev) => [...prev, mapDbToSpace(created)]);
       toast.success(`Pasta "${name}" criada!`);
     } catch (e) {
@@ -849,6 +893,18 @@ function ProjectsWorkspace() {
     setConfirmOpen(true);
   };
 
+  // Consolidated columns for the active space (deduplicated by title)
+  const spaceColumns = useMemo(() => {
+    const spaceProjectIds = new Set(
+      projectsList.filter((p) => p.spaceId === activeSpaceId).map((p) => p.id),
+    );
+    const allCols = [...spaceProjectIds].flatMap((id) => projectColumns[id] ?? []);
+    const seen = new Set<string>();
+    return allCols
+      .filter((col) => { if (seen.has(col.title)) return false; seen.add(col.title); return true; })
+      .sort((a, b) => a.position - b.position);
+  }, [activeSpaceId, projectsList, projectColumns]);
+
   // Dynamic values for progress calculation
   const totalProjectTasks = allTasks.filter((t) => t.projectId === activeProjectId);
   const doneProjectTasks = totalProjectTasks.filter((t) => t.status === "done");
@@ -885,14 +941,20 @@ function ProjectsWorkspace() {
         activeProjectId={activeProjectId}
         activeSpaceId={activeSpaceId}
         activeViewMode={activeViewMode}
+        workspaceName={activeWorkspace?.name ?? "Workspace"}
+        mobileOpen={mobileNavOpen}
+        onMobileClose={() => setMobileNavOpen(false)}
+        onWorkspaceClick={() => setActiveViewMode("workspace")}
         onProjectSelect={(id) => {
           setActiveProjectId(id);
           setActiveViewMode("project");
-          setSelectedDocId(null); // Reset docs tab state when switching projects
+          setSelectedDocId(null);
         }}
         onSpaceSelect={(id) => {
           setActiveSpaceId(id);
-          setActiveViewMode("space");
+          const space = spacesList.find((s) => s.id === id);
+          const isFolder = space?.spaceType === "folder" || !!space?.parentSpaceId;
+          setActiveViewMode(isFolder ? "space" : "space-group");
         }}
         onDeleteProject={handleDeleteProject}
         onEditProject={handleEditProject}
@@ -900,13 +962,71 @@ function ProjectsWorkspace() {
         onDeleteSpace={handleDeleteSpace}
         onEditSpace={handleEditSpace}
         onAddSpace={handleAddSpace}
+        onAddFolder={handleAddFolder}
       />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {activeViewMode === "space" && activeSpaceId ? (
+        {/* Mobile top bar — hamburger to open sidebar */}
+        <div className="flex md:hidden items-center gap-2 px-3 py-2 border-b border-white/10 bg-black/20">
+          <button
+            onClick={() => setMobileNavOpen(true)}
+            className="p-2 rounded-md hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            aria-label="Abrir navegação"
+          >
+            <Menu className="w-5 h-5" aria-hidden="true" />
+          </button>
+          <span className="text-sm font-medium truncate">
+            {activeViewMode === "workspace"
+              ? (activeWorkspace?.name ?? "Workspace")
+              : activeViewMode === "project" && activeProjectId
+              ? (projectsList.find((p) => p.id === activeProjectId)?.name ?? "")
+              : activeViewMode === "space-group" || activeViewMode === "space"
+              ? (spacesList.find((s) => s.id === activeSpaceId)?.name ?? "")
+              : ""}
+          </span>
+        </div>
+        {activeViewMode === "workspace" ? (
+          <WorkspaceOverview
+            workspaceName={activeWorkspace?.name ?? "Workspace"}
+            spaces={spacesList}
+            projects={projectsList}
+            members={members}
+            allTasks={allTasks}
+            onSpaceSelect={(id) => {
+              setActiveSpaceId(id);
+              const space = spacesList.find((s) => s.id === id);
+              const isFolder = space?.spaceType === "folder" || !!space?.parentSpaceId;
+              setActiveViewMode(isFolder ? "space" : "space-group");
+            }}
+            onProjectSelect={(id) => {
+              setActiveProjectId(id);
+              setActiveViewMode("project");
+            }}
+          />
+        ) : activeViewMode === "space-group" && activeSpaceId ? (
+          <SpaceGroupOverview
+            spaceId={activeSpaceId}
+            spaceName={spacesList.find((s) => s.id === activeSpaceId)?.name ?? "Espaço"}
+            folders={spacesList.filter(
+              (s) => s.parentSpaceId === activeSpaceId && s.spaceType === "folder",
+            )}
+            allProjects={projectsList}
+            allTasks={allTasks}
+            members={members}
+            onFolderSelect={(id) => {
+              setActiveSpaceId(id);
+              setActiveViewMode("space");
+            }}
+            onProjectSelect={(id) => {
+              setActiveProjectId(id);
+              setActiveViewMode("project");
+            }}
+          />
+        ) : activeViewMode === "space" && activeSpaceId ? (
           <SpaceOverview
             spaceId={activeSpaceId}
+            spaceColumns={spaceColumns}
             members={members}
             onTaskClick={handleTaskClick}
             onAddProject={async (spaceId, name) => {
@@ -1057,9 +1177,8 @@ function ProjectsWorkspace() {
                         onTaskClick={handleTaskClick}
                         onTaskAction={handleTaskAction}
                         onAddTask={(columnId) => {
-                          const cols = activeProjectId ? (projectColumns[activeProjectId] ?? []) : [];
-                          const col = cols.find((c) => c.id === columnId);
-                          setCreateTaskDefaultStatus((col ? "backlog" : "backlog") as TaskStatus);
+                          setCreateTaskDefaultColumnId(columnId);
+                          setCreateTaskDefaultStatus("backlog");
                           setCreateTaskDefaultDueDate("");
                           setCreateModalOpen(true);
                         }}
@@ -1074,11 +1193,13 @@ function ProjectsWorkspace() {
                 {activeView === "list" && (
                   <div className="h-full overflow-y-auto pr-2 no-scrollbar">
                     <ListView
+                      columns={activeProjectId ? (projectColumns[activeProjectId] ?? []) : []}
                       tasks={projectTasks}
                       onTaskClick={handleTaskClick}
                       onTaskAction={handleTaskAction}
-                      onAddTask={(status) => {
-                        setCreateTaskDefaultStatus(status);
+                      onAddTask={(columnId) => {
+                        setCreateTaskDefaultColumnId(columnId);
+                        setCreateTaskDefaultStatus("backlog");
                         setCreateTaskDefaultDueDate("");
                         setCreateModalOpen(true);
                       }}
@@ -1495,11 +1616,15 @@ function ProjectsWorkspace() {
       {activeProjectId && (
         <CreateTaskModal
           open={isCreateModalOpen}
-          onOpenChange={setCreateModalOpen}
+          onOpenChange={(v) => {
+            setCreateModalOpen(v);
+            if (!v) setCreateTaskDefaultColumnId("");
+          }}
           projectId={activeProjectId}
           onCreate={handleCreateTask}
           defaultStatus={createTaskDefaultStatus}
           defaultDueDate={createTaskDefaultDueDate}
+          defaultColumnId={createTaskDefaultColumnId}
           members={members}
         />
       )}
@@ -1512,6 +1637,7 @@ function ProjectsWorkspace() {
         onUpdate={handleUpdateTask}
         onMove={handleMoveTask}
         members={members}
+        columns={activeProjectId ? (projectColumns[activeProjectId] ?? []) : []}
       />
 
       {/* Reusable Dialogs for Main Workspace */}

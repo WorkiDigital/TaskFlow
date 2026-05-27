@@ -40,11 +40,20 @@ export interface AutomationStep {
   config?: any;
 }
 
+export type AutomationTrigger =
+  | "client_created"
+  | "contract_signed"
+  | "contract_sent"
+  | "task_moved_column"
+  | "project_created"
+  | "manual";
+
 export interface AutomationFlow {
   id: string;
   name: string;
   description?: string;
   mode: AutomationMode;
+  trigger?: AutomationTrigger | string;
   status: "active" | "paused" | "draft";
   steps: AutomationStep[];
   createdAt: string;

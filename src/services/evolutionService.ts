@@ -122,7 +122,7 @@ export const evolutionService = {
 
     return {
       id: instanceName,
-      agencyId: "agency-1",
+      agencyId: instanceName,
       instanceName,
       displayName: data.instance?.profileName ?? "WhatsApp Principal",
       phoneNumber: data.instance?.owner ?? "",

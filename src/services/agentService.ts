@@ -343,9 +343,11 @@ export const agentService = {
 
   // Get recent logs for the agency
   async getRecentLogs(limit = 30): Promise<AgentExecutionLog[]> {
+    const { agencyId } = await getCurrentUser();
     const { data, error } = await supabase
       .from("agent_execution_logs")
       .select("*")
+      .eq("agency_id", agencyId)
       .order("created_at", { ascending: false })
       .limit(limit);
 

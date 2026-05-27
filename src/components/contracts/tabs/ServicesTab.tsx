@@ -20,15 +20,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Briefcase, Plus, Edit2, Trash2, GripVertical, X } from "lucide-react";
+import { Briefcase, Plus, Edit2, Trash2, X } from "lucide-react";
 import {
   AgencyService,
-  ServiceDeliverable,
   listServices,
   createService,
   updateService,
   deleteService,
   upsertDeliverables,
+  listServiceOnboardingPlans,
 } from "@/services/contractsService";
 
 const PRICING_LABELS: Record<string, string> = {
@@ -46,6 +46,8 @@ interface ServiceFormState {
   pricing_type: string;
   default_price: string;
   default_duration_months: string;
+  default_onboarding_start_mode: string;
+  default_onboarding_plan_id: string;
 }
 
 const EMPTY_FORM: ServiceFormState = {
@@ -55,6 +57,8 @@ const EMPTY_FORM: ServiceFormState = {
   pricing_type: "recurring",
   default_price: "",
   default_duration_months: "",
+  default_onboarding_start_mode: "manual",
+  default_onboarding_plan_id: "none",
 };
 
 interface DeliverableRow {
@@ -71,12 +75,15 @@ export function ServicesTab() {
   const [deliverables, setDeliverables] = useState<DeliverableRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [plans, setPlans] = useState<{id: string; name: string}[]>([]);
 
   const load = async () => {
     setLoading(true);
-    const res = await listServices();
+    const [res, plansRes] = await Promise.all([listServices(), listServiceOnboardingPlans()]);
     if (res.error) toast.error(res.error);
     else setServices(res.data ?? []);
+    
+    if (plansRes.data) setPlans(plansRes.data);
     setLoading(false);
   };
 
@@ -101,6 +108,8 @@ export function ServicesTab() {
       default_price: s.default_price != null ? String(s.default_price) : "",
       default_duration_months:
         s.default_duration_months != null ? String(s.default_duration_months) : "",
+      default_onboarding_start_mode: s.default_onboarding_start_mode ?? "manual",
+      default_onboarding_plan_id: s.default_onboarding_plan_id ?? "none",
     });
     setDeliverables(
       (s.service_deliverables ?? []).map((d) => ({
@@ -133,6 +142,8 @@ export function ServicesTab() {
       default_duration_months: form.default_duration_months
         ? Number(form.default_duration_months)
         : undefined,
+      default_onboarding_start_mode: form.default_onboarding_start_mode as any,
+      default_onboarding_plan_id: form.default_onboarding_plan_id === "none" ? undefined : form.default_onboarding_plan_id,
     };
 
     let serviceId: string;
@@ -331,6 +342,38 @@ export function ServicesTab() {
                   onChange={(e) => setForm({ ...form, default_duration_months: e.target.value })}
                 />
               </div>
+              <div className="space-y-1.5">
+                <Label>Início do Onboarding</Label>
+                <Select
+                  value={form.default_onboarding_start_mode}
+                  onValueChange={(v) => setForm({ ...form, default_onboarding_start_mode: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">Manual (Aprovado internamente)</SelectItem>
+                    <SelectItem value="automatic_after_signature">Automático (Após Assinatura)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Plano de 7 Dias</Label>
+                <Select
+                  value={form.default_onboarding_plan_id}
+                  onValueChange={(v) => setForm({ ...form, default_onboarding_plan_id: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um roteiro (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem Roteiro</SelectItem>
+                    {plans.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-1.5 sm:col-span-2">
                 <Label>Descrição</Label>
                 <Textarea
@@ -360,7 +403,6 @@ export function ServicesTab() {
               )}
               {deliverables.map((d, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground/40" />
                   <Input
                     placeholder={`Entregável ${i + 1}`}
                     value={d.title}

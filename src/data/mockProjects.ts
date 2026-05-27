@@ -14,6 +14,9 @@ export interface Space {
   id: string;
   name: string;
   color: string;
+  icon?: string | null;
+  parentSpaceId?: string | null;
+  spaceType?: "space" | "folder";
 }
 
 export interface Project {
@@ -69,6 +72,7 @@ export interface ProjectTask {
   id: string;
   projectId: string;
   columnId: string;
+  parentTaskId?: string | null;
   status: TaskStatus;
   title: string;
   description: string;

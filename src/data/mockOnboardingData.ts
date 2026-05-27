@@ -10,7 +10,7 @@ import type {
 
 export const defaultFlowSteps: OnboardingFlowStep[] = [
   {
-    id: "send_contractual_form",
+    id: "send_contract_form",
     name: "Enviar formulário de dados contratuais",
     description: "Envia o link do formulário contratual para o cliente preencher.",
     enabled: true,
@@ -19,14 +19,14 @@ export const defaultFlowSteps: OnboardingFlowStep[] = [
     order: 1,
   },
   {
-    id: "await_contractual_form",
+    id: "wait_contract_form",
     name: "Aguardar preenchimento do formulário contratual",
     description: "Pausa o fluxo até o cliente enviar os dados contratuais.",
     enabled: true,
     status: "configured",
     icon: "⏳",
     order: 2,
-    dependsOn: ["send_contractual_form"],
+    dependsOn: ["send_contract_form"],
   },
   {
     id: "generate_contract",
@@ -36,7 +36,7 @@ export const defaultFlowSteps: OnboardingFlowStep[] = [
     status: "partial",
     icon: "📄",
     order: 3,
-    dependsOn: ["await_contractual_form"],
+    dependsOn: ["wait_contract_form"],
   },
   {
     id: "send_contract_signature",
@@ -49,7 +49,7 @@ export const defaultFlowSteps: OnboardingFlowStep[] = [
     dependsOn: ["generate_contract"],
   },
   {
-    id: "create_whatsapp_group",
+    id: "create_client_whatsapp_group",
     name: "Criar grupo WhatsApp do cliente",
     description: "Cria automaticamente o grupo de WhatsApp do projeto via Evolution API.",
     enabled: true,
@@ -58,14 +58,14 @@ export const defaultFlowSteps: OnboardingFlowStep[] = [
     order: 5,
   },
   {
-    id: "add_participants",
+    id: "add_group_participants",
     name: "Adicionar participantes ao grupo",
     description: "Adiciona os gestores e o cliente ao grupo recém-criado.",
     enabled: true,
     status: "pending",
     icon: "👥",
     order: 6,
-    dependsOn: ["create_whatsapp_group"],
+    dependsOn: ["create_client_whatsapp_group"],
   },
   {
     id: "update_group_description",
@@ -75,20 +75,20 @@ export const defaultFlowSteps: OnboardingFlowStep[] = [
     status: "pending",
     icon: "✏️",
     order: 7,
-    dependsOn: ["create_whatsapp_group"],
+    dependsOn: ["create_client_whatsapp_group"],
   },
   {
-    id: "send_welcome_message",
+    id: "send_client_group_welcome",
     name: "Enviar mensagem de boas-vindas",
     description: "Envia a mensagem de boas-vindas personalizada no grupo do cliente.",
     enabled: true,
     status: "configured",
     icon: "🎉",
     order: 8,
-    dependsOn: ["create_whatsapp_group"],
+    dependsOn: ["create_client_whatsapp_group"],
   },
   {
-    id: "notify_internal_group",
+    id: "send_internal_agency_notification",
     name: "Notificar grupo interno da agência",
     description: "Avisa o time interno que um novo cliente foi onboardado.",
     enabled: true,
@@ -104,10 +104,10 @@ export const defaultFlowSteps: OnboardingFlowStep[] = [
     status: "configured",
     icon: "📝",
     order: 10,
-    dependsOn: ["create_whatsapp_group"],
+    dependsOn: ["create_client_whatsapp_group"],
   },
   {
-    id: "await_briefing_form",
+    id: "wait_briefing_form",
     name: "Aguardar preenchimento do briefing",
     description: "Pausa o fluxo até o cliente retornar o briefing completo.",
     enabled: true,
@@ -117,7 +117,7 @@ export const defaultFlowSteps: OnboardingFlowStep[] = [
     dependsOn: ["send_briefing_form"],
   },
   {
-    id: "finalize_onboarding",
+    id: "finish_onboarding",
     name: "Finalizar onboarding",
     description: "Marca o onboarding como concluído e ativa o projeto no sistema.",
     enabled: true,

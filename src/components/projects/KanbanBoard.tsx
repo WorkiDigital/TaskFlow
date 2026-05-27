@@ -42,6 +42,11 @@ export function KanbanBoard({
 
   const sorted = [...columns].sort((a, b) => a.position - b.position);
 
+  const subtaskCountMap = tasks.reduce<Record<string, number>>((acc, t) => {
+    if (t.parentTaskId) acc[t.parentTaskId] = (acc[t.parentTaskId] ?? 0) + 1;
+    return acc;
+  }, {});
+
   return (
     <>
       <div className="-mx-4 overflow-x-auto px-4 pb-4 md:mx-0 md:px-0 custom-scrollbar h-full">
@@ -50,7 +55,8 @@ export function KanbanBoard({
             <KanbanColumn
               key={col.id}
               column={col}
-              tasks={tasks.filter((t) => t.columnId === col.id)}
+              tasks={tasks.filter((t) => t.columnId === col.id && !t.parentTaskId)}
+              subtaskCountMap={subtaskCountMap}
               onTaskClick={(t) => onTaskClick?.(t)}
               onAddTask={onAddTask}
               onTaskAction={onTaskAction}

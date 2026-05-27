@@ -6,9 +6,14 @@ import { FormsTab } from "./FormsTab";
 import { VariablesTab } from "./VariablesTab";
 import { MessagesTab } from "./MessagesTab";
 import { SimulationTab } from "./SimulationTab";
+import { PreOnboardingTab } from "./PreOnboardingTab";
+import { OnboardingPlansTab } from "./OnboardingPlansTab";
 import { useOnboardingWorkspace } from "@/hooks/useOnboardingWorkspace";
+import { Users, Map } from "lucide-react";
 
 const TABS = [
+  { value: "pre_onboarding", label: "Pré-Onboarding", icon: Users, short: "Pré-Onb." },
+  { value: "plans", label: "Roteiros", icon: Map, short: "Roteiros" },
   { value: "flows", label: "Fluxos", icon: Workflow, short: "Fluxos" },
   { value: "forms", label: "Formulários", icon: FileText, short: "Forms" },
   { value: "variables", label: "Variáveis", icon: Hash, short: "Vars" },
@@ -80,7 +85,7 @@ export function OnboardingWorkspace() {
       </div>
 
       {/* ─── Tabs ─────────────────────────────────────────────────────────── */}
-      <Tabs defaultValue="flows" className="space-y-5">
+      <Tabs defaultValue="pre_onboarding" className="space-y-5">
         {/* Tab List com scroll horizontal no mobile */}
         <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="glass-panel inline-flex min-w-max w-full sm:w-auto gap-0.5 h-11">
@@ -104,6 +109,16 @@ export function OnboardingWorkspace() {
             })}
           </TabsList>
         </div>
+
+        {/* ─── Aba: Pré-Onboarding ─────────────────────────────────────── */}
+        <TabsContent value="pre_onboarding">
+          <PreOnboardingTab />
+        </TabsContent>
+
+        {/* ─── Aba: Planos de 7 Dias ─────────────────────────────────────── */}
+        <TabsContent value="plans">
+          <OnboardingPlansTab />
+        </TabsContent>
 
         {/* ─── Aba: Fluxos ─────────────────────────────────────────────── */}
         <TabsContent value="flows">

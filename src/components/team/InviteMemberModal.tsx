@@ -193,7 +193,7 @@ export function InviteMemberModal({ open, onOpenChange, onSuccess }: InviteMembe
                 <Label htmlFor="invite-title">Cargo / Função</Label>
                 <Select value={jobTitle} onValueChange={setJobTitle}>
                   <SelectTrigger id="invite-title">
-                    <SelectValue placeholder="Selecione ou digite..." />
+                    <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Atendimento">Atendimento</SelectItem>
@@ -227,13 +227,13 @@ export function InviteMemberModal({ open, onOpenChange, onSuccess }: InviteMembe
                       ))}
                   </SelectContent>
                 </Select>
-                {/* Permite digitar caso não queira do Select */}
-                <Input
-                  placeholder="Ou digite um cargo customizado..."
-                  value={jobTitle}
-                  onChange={(e) => setJobTitle(e.target.value)}
-                  className="mt-1 h-8 text-xs"
-                />
+                {!jobTitle && (
+                  <Input
+                    placeholder="Ou digite um cargo customizado..."
+                    onChange={(e) => setJobTitle(e.target.value)}
+                    className="mt-1 h-8 text-xs"
+                  />
+                )}
               </div>
             </div>
             <DialogFooter>

@@ -42,23 +42,37 @@ async function invoke<T>(functionName: string, body: Record<string, unknown>): P
 
 export const onboardingService = {
   async getWorkspace(): Promise<OnboardingWorkspaceState | null> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const { data: userRow } = await supabase
+      .from("users")
+      .select("agency_id")
+      .eq("id", user.id)
+      .single();
+    if (!userRow?.agency_id) return null;
     const { data, error } = await supabase
       .from("onboarding_workspace")
       .select("id, state, updated_at")
-      .eq("id", "default")
+      .eq("agency_id", userRow.agency_id)
       .maybeSingle<OnboardingWorkspaceRow>();
-
     if (error) throw error;
     return data?.state ?? null;
   },
 
   async saveWorkspace(state: OnboardingWorkspaceState): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Não autenticado");
+    const { data: userRow } = await supabase
+      .from("users")
+      .select("agency_id")
+      .eq("id", user.id)
+      .single();
+    if (!userRow?.agency_id) throw new Error("Agência não encontrada");
     const { error } = await supabase.from("onboarding_workspace").upsert({
-      id: "default",
+      agency_id: userRow.agency_id,
       state,
       updated_at: new Date().toISOString(),
-    });
-
+    }, { onConflict: "agency_id" });
     if (error) throw error;
   },
 

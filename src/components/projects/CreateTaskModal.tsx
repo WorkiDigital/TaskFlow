@@ -29,6 +29,7 @@ interface CreateTaskModalProps {
   onCreate: (task: ProjectTask) => void;
   defaultStatus?: TaskStatus;
   defaultDueDate?: string;
+  defaultColumnId?: string;
   members: TeamMember[];
 }
 
@@ -39,6 +40,7 @@ export function CreateTaskModal({
   onCreate,
   defaultStatus,
   defaultDueDate,
+  defaultColumnId,
   members,
 }: CreateTaskModalProps) {
   const [loading, setLoading] = useState(false);
@@ -82,12 +84,14 @@ export function CreateTaskModal({
         priority: form.priority,
         assignee_id: member?.id,
         due_date: form.dueDate || undefined,
+        column_id: defaultColumnId || undefined,
       });
 
       const newTask: ProjectTask = {
         id: created.id,
         projectId,
-        columnId: mockProjectColumns.find((c) => c.status === form.status)?.id || "col-1",
+        columnId: defaultColumnId || created.column_id ||
+          mockProjectColumns.find((c) => c.status === form.status)?.id || "col-1",
         status: form.status,
         title: created.title,
         description: created.description ?? "",

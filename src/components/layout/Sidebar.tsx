@@ -7,7 +7,6 @@ import {
   KanbanSquare,
   Settings,
   Sparkles,
-  Workflow,
   Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -31,8 +30,7 @@ export const navItems = [
     icon: Layers,
     subtitle: "Modelos operacionais de projeto",
   },
-  { to: "/automations", label: "Automacoes", icon: Workflow, subtitle: "Fluxos e execucoes" },
-  { to: "/settings", label: "Configurações", icon: Settings, subtitle: "Sua agência e equipe" },
+{ to: "/settings", label: "Configurações", icon: Settings, subtitle: "Sua agência e equipe" },
 ] as const;
 
 interface SidebarProps {

@@ -12,8 +12,11 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/services/supabase";
-import { onboardingService } from "@/services/onboardingService";
 import { getCurrentUserAgency } from "@/lib/auth";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { listServices, AgencyService, createClientDeal } from "@/services/contractsService";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useEffect } from "react";
 
 interface ClientFormDialogProps {
   open: boolean;
@@ -22,9 +25,19 @@ interface ClientFormDialogProps {
 }
 
 export function ClientFormDialog({ open, onOpenChange, onCreate }: ClientFormDialogProps) {
-  const [form, setForm] = useState({ name: "", email: "", phone: "", company: "" });
+  const { activeWorkspace } = useWorkspace();
+  const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", service_id: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [services, setServices] = useState<AgencyService[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      listServices().then((res) => {
+        if (res.data) setServices(res.data);
+      });
+    }
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,25 +85,32 @@ export function ClientFormDialog({ open, onOpenChange, onCreate }: ClientFormDia
 
     try {
       if (createdClient?.id) {
-        const run = await onboardingService.startRun(createdClient.id);
-        toast.success(
-          run.status === "completed"
-            ? "Cliente criado e onboarding executado"
-            : "Cliente criado e onboarding iniciado com pendencias",
-        );
-      } else {
-        toast.success("Cliente criado com sucesso");
+        const service = services.find(s => s.id === form.service_id);
+        const dealRes = await createClientDeal({
+          client_id: createdClient.id,
+          agency_id: agencyId,
+          workspace_id: activeWorkspace?.id ?? null,
+          service_id: form.service_id || null,
+          contract_template_id: service?.default_contract_template_id || null,
+          value: service?.default_price || null,
+          duration_months: service?.default_duration_months || null,
+          onboarding_start_mode: service?.default_onboarding_start_mode ?? "manual",
+          status: "created",
+        });
+        
+        if (dealRes.error) {
+          throw new Error(dealRes.error);
+        }
+        toast.success("Cliente e Negócio (Deal) criados com sucesso!");
       }
-    } catch (runError) {
-      console.error(runError);
-      toast.error(
-        runError instanceof Error ? runError.message : "Cliente criado, mas onboarding falhou",
-      );
+    } catch (dealError) {
+      console.error(dealError);
+      toast.error("Cliente criado, mas falha ao criar o Deal comercial.");
     } finally {
       setLoading(false);
     }
 
-    setForm({ name: "", email: "", phone: "", company: "" });
+    setForm({ name: "", email: "", phone: "", company: "", service_id: "" });
     onCreate();
     onOpenChange(false);
   };
@@ -146,6 +166,19 @@ export function ClientFormDialog({ open, onOpenChange, onCreate }: ClientFormDia
               disabled={loading}
             />
             {errors.company && <p className="text-xs text-destructive">{errors.company}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="service">Serviço Contratado</Label>
+            <Select value={form.service_id} onValueChange={(v) => setForm({ ...form, service_id: v })} disabled={loading}>
+              <SelectTrigger id="service">
+                <SelectValue placeholder="Selecione um serviço (opcional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {services.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <DialogFooter>
             <Button

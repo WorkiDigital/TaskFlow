@@ -15,6 +15,7 @@ import type { DbProjectColumn } from "@/services/projectsService";
 interface KanbanColumnProps {
   column: DbProjectColumn;
   tasks: ProjectTask[];
+  subtaskCountMap?: Record<string, number>;
   onTaskClick: (task: ProjectTask) => void;
   onAddTask?: (columnId: string) => void;
   onTaskAction?: (
@@ -28,6 +29,7 @@ interface KanbanColumnProps {
 export function KanbanColumn({
   column,
   tasks,
+  subtaskCountMap,
   onTaskClick,
   onAddTask,
   onTaskAction,
@@ -136,7 +138,13 @@ export function KanbanColumn({
       {/* Tasks */}
       <div className="flex flex-1 flex-col gap-3 overflow-y-auto custom-scrollbar pb-2 px-1">
         {tasks.map((task) => (
-          <KanbanCard key={task.id} task={task} onClick={onTaskClick} onAction={onTaskAction} />
+          <KanbanCard
+            key={task.id}
+            task={task}
+            subtaskCount={subtaskCountMap?.[task.id] ?? 0}
+            onClick={onTaskClick}
+            onAction={onTaskAction}
+          />
         ))}
 
         {tasks.length === 0 && (

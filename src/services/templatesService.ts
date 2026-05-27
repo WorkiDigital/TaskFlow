@@ -49,6 +49,17 @@ export async function getTemplates() {
 }
 
 export async function getTemplateById(templateId: string) {
+  const { data: user } = await supabase.auth.getUser();
+  if (!user.user) throw new Error("Not authenticated");
+
+  const { data: userData } = await supabase
+    .from("users")
+    .select("agency_id")
+    .eq("id", user.user.id)
+    .single();
+
+  if (!userData?.agency_id) throw new Error("User has no agency_id");
+
   const { data, error } = await supabase
     .from("agency_templates")
     .select(
@@ -62,6 +73,7 @@ export async function getTemplateById(templateId: string) {
     `,
     )
     .eq("id", templateId)
+    .eq("agency_id", userData.agency_id)
     .single();
 
   if (error) throw error;

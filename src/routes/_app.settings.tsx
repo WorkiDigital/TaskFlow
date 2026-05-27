@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/services/supabase";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { teamMembers } from "@/lib/mock-data";
@@ -57,11 +58,9 @@ export const Route = createFileRoute("/_app/settings")({
 });
 
 function SettingsPage() {
-  const [agency, setAgency] = useState({
-    name: "Agência Prime",
-    domain: "agenciaprime.com",
-    bio: "Estratégia, performance e branding para marcas que querem escalar.",
-  });
+  const [agency, setAgency] = useState({ name: "", domain: "", bio: "" });
+  const [agencyId, setAgencyId] = useState<string | null>(null);
+  const [savingAgency, setSavingAgency] = useState(false);
   const [notifs, setNotifs] = useState({ email: true, push: false, weekly: true });
 
   // Team Management
@@ -173,6 +172,23 @@ function SettingsPage() {
       .catch(() => {});
 
     loadMembers();
+
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data: userRow } = await supabase
+        .from("users")
+        .select("agency_id")
+        .eq("id", user.id)
+        .single();
+      if (!userRow?.agency_id) return;
+      setAgencyId(userRow.agency_id);
+      const { data: ag } = await supabase
+        .from("agencies")
+        .select("name, domain, bio")
+        .eq("id", userRow.agency_id)
+        .single();
+      if (ag) setAgency({ name: ag.name ?? "", domain: ag.domain ?? "", bio: ag.bio ?? "" });
+    });
   }, []);
 
   const saveAiProviderConfig = async () => {
@@ -279,12 +295,25 @@ function SettingsPage() {
             </div>
             <div className="mt-5 flex justify-end">
               <Button
-                onClick={() => {
-                  console.log("[Settings] agência salva (mock):", agency);
-                  toast.success("Alterações salvas");
+                disabled={savingAgency}
+                onClick={async () => {
+                  if (!agencyId) return;
+                  setSavingAgency(true);
+                  const { error } = await supabase
+                    .from("agencies")
+                    .update({
+                      name: agency.name,
+                      domain: agency.domain,
+                      bio: agency.bio,
+                      updated_at: new Date().toISOString(),
+                    })
+                    .eq("id", agencyId);
+                  setSavingAgency(false);
+                  if (error) toast.error("Erro ao salvar agência");
+                  else toast.success("Alterações salvas");
                 }}
               >
-                Salvar
+                {savingAgency ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
               </Button>
             </div>
           </GlassCard>

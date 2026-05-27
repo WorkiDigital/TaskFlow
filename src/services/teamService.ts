@@ -322,9 +322,12 @@ export const teamService = {
     return result;
   },
 
-  // Remover membro da equipe (Deletar da public.users)
+  // Suspender membro (soft-delete — preserva histórico e FK references)
   async removeMember(userId: string) {
-    const { error } = await supabase.from("users").delete().eq("id", userId);
+    const { error } = await supabase
+      .from("users")
+      .update({ status: "suspended", updated_at: new Date().toISOString() })
+      .eq("id", userId);
 
     if (error) throw error;
   },

@@ -59,6 +59,8 @@ export interface AgencyService {
   default_duration_months?: number | null;
   default_contract_template_id?: string | null;
   default_project_template_id?: string | null;
+  default_onboarding_start_mode?: string | null;
+  default_onboarding_plan_id?: string | null;
   status: string;
   created_at?: string;
   updated_at?: string;
@@ -87,8 +89,14 @@ export interface ClientDeal {
   end_date?: string | null;
   status: string;
   custom_deliverables: unknown[];
+  workspace_id?: string | null;
+  onboarding_start_mode?: string | null;
+  data_collection_mode?: string | null;
   created_at?: string;
   updated_at?: string;
+  clients?: {
+    name: string;
+  } | null;
 }
 
 export interface CreateContractDraftInput {
@@ -631,7 +639,7 @@ export async function listClientDeals(clientId?: string): Promise<ServiceResult<
     const { agencyId } = await getCurrentUserAgency();
     let query = supabase
       .from("client_deals")
-      .select("*")
+      .select("*, clients(name)")
       .eq("agency_id", agencyId)
       .order("created_at", { ascending: false });
     if (clientId) query = query.eq("client_id", clientId);
@@ -677,6 +685,164 @@ export async function updateClientDeal(
       .single();
     if (error) return { error: error.message };
     return { data: data as ClientDeal };
+  } catch (e) {
+    return { error: String(e) };
+  }
+}
+
+// ─── Planos de Onboarding ───────────────────────────────────────────────────
+
+export async function listServiceOnboardingPlans(): Promise<ServiceResult<{id: string; name: string; description: string | null}[]>> {
+  try {
+    const { agencyId } = await getCurrentUserAgency();
+    const { data, error } = await supabase
+      .from("service_onboarding_plans")
+      .select("*")
+      .eq("agency_id", agencyId)
+      .eq("status", "active")
+      .order("name");
+    if (error) return { error: error.message };
+    return { data: data as any[] };
+  } catch (e) {
+    return { error: String(e) };
+  }
+}
+
+export async function createServiceOnboardingPlan(input: { name: string; description?: string }): Promise<ServiceResult<any>> {
+  try {
+    const { agencyId } = await getCurrentUserAgency();
+    const { data, error } = await supabase
+      .from("service_onboarding_plans")
+      .insert({ ...input, agency_id: agencyId })
+      .select("*")
+      .single();
+    if (error) return { error: error.message };
+    return { data };
+  } catch (e) {
+    return { error: String(e) };
+  }
+}
+
+export async function updateServiceOnboardingPlan(id: string, input: { name?: string; description?: string }): Promise<ServiceResult<any>> {
+  try {
+    const { agencyId } = await getCurrentUserAgency();
+    const { data, error } = await supabase
+      .from("service_onboarding_plans")
+      .update({ ...input, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("agency_id", agencyId)
+      .select("*")
+      .single();
+    if (error) return { error: error.message };
+    return { data };
+  } catch (e) {
+    return { error: String(e) };
+  }
+}
+
+export async function deleteServiceOnboardingPlan(id: string): Promise<ServiceResult<null>> {
+  try {
+    const { agencyId } = await getCurrentUserAgency();
+    const { error } = await supabase
+      .from("service_onboarding_plans")
+      .delete()
+      .eq("id", id)
+      .eq("agency_id", agencyId);
+    if (error) return { error: error.message };
+    return { data: null };
+  } catch (e) {
+    return { error: String(e) };
+  }
+}
+
+export async function getServiceOnboardingPlanSteps(planId: string): Promise<ServiceResult<any[]>> {
+  try {
+    const { agencyId } = await getCurrentUserAgency();
+    const { data, error } = await supabase
+      .from("service_onboarding_plan_steps")
+      .select("*")
+      .eq("plan_id", planId)
+      .eq("agency_id", agencyId)
+      .order("day_number", { ascending: true });
+    if (error) return { error: error.message };
+    return { data };
+  } catch (e) {
+    return { error: String(e) };
+  }
+}
+
+export async function upsertServiceOnboardingPlanSteps(planId: string, steps: any[]): Promise<ServiceResult<null>> {
+  try {
+    const { agencyId } = await getCurrentUserAgency();
+    const { data: currentSteps } = await supabase
+      .from("service_onboarding_plan_steps")
+      .select("id")
+      .eq("plan_id", planId)
+      .eq("agency_id", agencyId);
+      
+    const currentIds = currentSteps?.map(s => s.id) || [];
+    const incomingIds = steps.filter(s => s.id && !s.id.startsWith("new_")).map(s => s.id);
+    const toDelete = currentIds.filter(id => !incomingIds.includes(id));
+
+    if (toDelete.length > 0) {
+      await supabase.from("service_onboarding_plan_steps").delete().in("id", toDelete);
+    }
+
+    const toUpsert = steps.map(s => {
+      const { id, ...rest } = s;
+      return id && !id.startsWith("new_")
+        ? { id, ...rest, plan_id: planId, agency_id: agencyId, updated_at: new Date().toISOString() }
+        : { ...rest, plan_id: planId, agency_id: agencyId };
+    });
+
+    if (toUpsert.length > 0) {
+      const { error } = await supabase.from("service_onboarding_plan_steps").upsert(toUpsert);
+      if (error) return { error: error.message };
+    }
+
+    return { data: null };
+  } catch (e) {
+    return { error: String(e) };
+  }
+}
+
+// ─── Deal Events ──────────────────────────────────────────────────────────────
+
+export async function logClientDealEvent(
+  dealId: string,
+  clientId: string,
+  type: string,
+  message?: string,
+  metadata?: Record<string, unknown>
+): Promise<ServiceResult<null>> {
+  try {
+    const { agencyId } = await getCurrentUserAgency();
+    const { error } = await supabase.from("client_deal_events").insert({
+      agency_id: agencyId,
+      client_id: clientId,
+      deal_id: dealId,
+      type,
+      message,
+      metadata,
+    });
+    if (error) return { error: error.message };
+    return { data: null };
+  } catch (e) {
+    return { error: String(e) };
+  }
+}
+
+export async function listDealEvents(dealId: string): Promise<ServiceResult<any[]>> {
+  try {
+    const { agencyId } = await getCurrentUserAgency();
+    const { data, error } = await supabase
+      .from("client_deal_events")
+      .select("*")
+      .eq("deal_id", dealId)
+      .eq("agency_id", agencyId)
+      .order("created_at", { ascending: false });
+    if (error) return { error: error.message };
+    return { data };
   } catch (e) {
     return { error: String(e) };
   }

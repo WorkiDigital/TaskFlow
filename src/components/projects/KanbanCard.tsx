@@ -9,6 +9,7 @@ import {
   Copy,
   UserPlus,
   Trash2,
+  GitBranch,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -21,6 +22,7 @@ import {
 
 interface KanbanCardProps {
   task: ProjectTask;
+  subtaskCount?: number;
   onClick: (task: ProjectTask) => void;
   onAction?: (
     action: "edit" | "duplicate" | "change_assignee" | "delete",
@@ -42,7 +44,7 @@ const priorityLabels = {
   urgent: "Urgente",
 };
 
-export function KanbanCard({ task, onClick, onAction }: KanbanCardProps) {
+export function KanbanCard({ task, subtaskCount = 0, onClick, onAction }: KanbanCardProps) {
   const completedChecklist = task.checklist?.filter((c) => c.done).length || 0;
   const totalChecklist = task.checklist?.length || 0;
   const hasChecklist = totalChecklist > 0;
@@ -121,6 +123,12 @@ export function KanbanCard({ task, onClick, onAction }: KanbanCardProps) {
 
       <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-2 border-t border-white/5">
         <div className="flex items-center gap-3">
+          {subtaskCount > 0 && (
+            <div className="flex items-center gap-1 text-muted-foreground" title="Subtarefas">
+              <GitBranch className="w-3 h-3" />
+              <span className="text-[10px]">{subtaskCount}</span>
+            </div>
+          )}
           {hasChecklist && (
             <div className="flex items-center gap-1" title="Checklist">
               <CheckCircle2

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { evolutionService } from "@/services/evolutionService";
 import type { WhatsAppGroup } from "@/data/mockWhatsAppConnection";
+import { toast } from "sonner";
 
 interface NotifyEvents {
   onboardingStarted: boolean;
@@ -88,13 +89,21 @@ export function GroupSelector({ type, onSave, onCancel, initialConfig }: GroupSe
 
   const handleSave = () => {
     if (type === "client") {
+      const parsedParticipants = participants
+        .split(",")
+        .map((p: string) => p.trim().replace(/\D/g, ""))
+        .filter(Boolean);
+
+      const invalid = parsedParticipants.filter((p: string) => p.length < 10 || p.length > 15);
+      if (invalid.length > 0) {
+        toast.error(`Telefones inválidos: ${invalid.join(", ")}. Use formato com DDI (ex: 5511999999999).`);
+        return;
+      }
+
       onSave({
         createAutomatic,
         groupName,
-        participants: participants
-          .split(",")
-          .map((p: string) => p.trim())
-          .filter(Boolean),
+        participants: parsedParticipants,
         description,
       });
     } else {

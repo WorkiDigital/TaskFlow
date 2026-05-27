@@ -41,12 +41,14 @@ import {
   getSpaceFiles,
   createProject,
   updateProjectTask,
+  type DbProjectColumn,
 } from "@/services/projectsService";
 import { Space, ProjectTask, TaskStatus, TaskPriority } from "@/data/mockProjects";
 import { TeamMember } from "@/services/teamService";
 
 interface SpaceOverviewProps {
   spaceId: string;
+  spaceColumns: DbProjectColumn[];
   members: TeamMember[];
   onTaskClick: (task: ProjectTask) => void;
   onAddProject: (spaceId: string, name: string) => Promise<void>;
@@ -57,6 +59,7 @@ type TabType = "overview" | "tasks" | "board" | "activities" | "time" | "files";
 
 export function SpaceOverview({
   spaceId,
+  spaceColumns,
   members,
   onTaskClick,
   onAddProject,
@@ -638,95 +641,84 @@ export function SpaceOverview({
           {activeTab === "board" && (
             <div className="h-full flex flex-col gap-4 overflow-hidden">
               <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin flex-1 min-h-[500px]">
-                {(
-                  [
-                    { id: "todo", title: "A Fazer" },
-                    { id: "in_progress", title: "Em Progresso" },
-                    { id: "review", title: "Em Revisão" },
-                    { id: "done", title: "Finalizado" },
-                  ] as const
-                ).map((column) => {
-                  const columnTasks = tasks.filter((t) => t.status === column.id);
+                {spaceColumns.length === 0 ? (
+                  <div className="flex flex-1 items-center justify-center text-muted-foreground/40 italic text-xs">
+                    Nenhuma coluna configurada nesta pasta.
+                  </div>
+                ) : (
+                  spaceColumns.map((column) => {
+                    const columnTasks = tasks.filter((t) => t.column_id === column.id);
+                    return (
+                      <div
+                        key={column.id}
+                        className="w-72 shrink-0 bg-white/[0.01] border border-white/5 rounded-2xl flex flex-col h-full max-h-[600px] overflow-hidden"
+                      >
+                        {/* Header da coluna */}
+                        <div className="p-4 bg-white/[0.02] border-b border-white/5 flex items-center justify-between shrink-0">
+                          <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                            <span
+                              className="w-2 h-2 rounded-full inline-block"
+                              style={{ backgroundColor: column.color ?? "#6b7280" }}
+                            />
+                            {column.icon} {column.title}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-semibold bg-white/5 px-2 py-0.5 rounded-full">
+                            {columnTasks.length}
+                          </span>
+                        </div>
 
-                  return (
-                    <div
-                      key={column.id}
-                      className="w-72 shrink-0 bg-white/[0.01] border border-white/5 rounded-2xl flex flex-col h-full max-h-[600px] overflow-hidden"
-                    >
-                      {/* Header da coluna */}
-                      <div className="p-4 bg-white/[0.02] border-b border-white/5 flex items-center justify-between shrink-0">
-                        <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                          <span
-                            className={cn(
-                              "w-2 h-2 rounded-full",
-                              column.id === "todo"
-                                ? "bg-blue-400"
-                                : column.id === "in_progress"
-                                  ? "bg-amber-400"
-                                  : column.id === "review"
-                                    ? "bg-purple-400"
-                                    : "bg-teal-400",
-                            )}
-                          />
-                          {column.title}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground font-semibold bg-white/5 px-2 py-0.5 rounded-full">
-                          {columnTasks.length}
-                        </span>
-                      </div>
+                        {/* Lista de cards */}
+                        <div className="flex-1 overflow-y-auto p-3 space-y-2.5 scrollbar-none">
+                          {columnTasks.map((t) => {
+                            const mapped = mapToProjectTask(t);
+                            return (
+                              <div
+                                key={t.id}
+                                onClick={() => onTaskClick(mapped)}
+                                className="glass-card bg-black/20 p-3.5 border border-white/5 rounded-xl hover:border-white/15 hover:bg-white/[0.01] transition-all cursor-pointer space-y-3 group"
+                              >
+                                <div className="flex items-start justify-between gap-1">
+                                  <h5 className="text-xs font-semibold text-slate-200 line-clamp-2 leading-snug group-hover:text-primary transition-colors">
+                                    {t.title}
+                                  </h5>
+                                </div>
 
-                      {/* Lista de cards */}
-                      <div className="flex-1 overflow-y-auto p-3 space-y-2.5 scrollbar-none">
-                        {columnTasks.map((t) => {
-                          const mapped = mapToProjectTask(t);
-                          return (
-                            <div
-                              key={t.id}
-                              onClick={() => onTaskClick(mapped)}
-                              className="glass-card bg-black/20 p-3.5 border border-white/5 rounded-xl hover:border-white/15 hover:bg-white/[0.01] transition-all cursor-pointer space-y-3 group"
-                            >
-                              <div className="flex items-start justify-between gap-1">
-                                <h5 className="text-xs font-semibold text-slate-200 line-clamp-2 leading-snug group-hover:text-primary transition-colors">
-                                  {t.title}
-                                </h5>
-                              </div>
+                                <div className="flex items-center justify-between text-[9px] text-muted-foreground pt-1 border-t border-white/[0.03]">
+                                  <span
+                                    className="font-semibold text-primary truncate max-w-[120px]"
+                                    title={t.projectName}
+                                  >
+                                    {t.projectName || "Geral"}
+                                  </span>
 
-                              <div className="flex items-center justify-between text-[9px] text-muted-foreground pt-1 border-t border-white/[0.03]">
-                                <span
-                                  className="font-semibold text-primary truncate max-w-[120px]"
-                                  title={t.projectName}
-                                >
-                                  {t.projectName || "Geral"}
-                                </span>
-
-                                <div className="flex items-center gap-1">
-                                  {t.due_date && (
-                                    <span className="flex items-center gap-0.5 mr-1 font-medium text-muted-foreground/80">
-                                      <Calendar className="w-3 h-3 text-muted-foreground/60" />
-                                      {new Date(t.due_date).toLocaleDateString("pt-BR", {
-                                        day: "2-digit",
-                                        month: "2-digit",
-                                      })}
-                                    </span>
-                                  )}
-
-                                  <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-extrabold text-primary uppercase shrink-0">
-                                    {mapped.assignee.substring(0, 2)}
+                                  <div className="flex items-center gap-1">
+                                    {t.due_date && (
+                                      <span className="flex items-center gap-0.5 mr-1 font-medium text-muted-foreground/80">
+                                        <Calendar className="w-3 h-3 text-muted-foreground/60" />
+                                        {new Date(t.due_date).toLocaleDateString("pt-BR", {
+                                          day: "2-digit",
+                                          month: "2-digit",
+                                        })}
+                                      </span>
+                                    )}
+                                    <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-extrabold text-primary uppercase shrink-0">
+                                      {mapped.assignee.substring(0, 2)}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
+                            );
+                          })}
+                          {columnTasks.length === 0 && (
+                            <div className="text-center py-12 text-muted-foreground/40 italic text-[10px]">
+                              Vazio
                             </div>
-                          );
-                        })}
-                        {columnTasks.length === 0 && (
-                          <div className="text-center py-12 text-muted-foreground/40 italic text-[10px]">
-                            Vazio
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             </div>
           )}

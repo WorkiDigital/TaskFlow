@@ -316,11 +316,42 @@ export interface CreateProjectFromTemplateInput {
   name: string;
 }
 
-export async function createProjectFromTemplate(_input: CreateProjectFromTemplateInput) {
-  console.log(
-    "[ProjectsService] createProjectFromTemplate NOT IMPLEMENTED ON FRONTEND. Should be run on Edge Function.",
-  );
-  return null;
+export async function createProjectFromTemplate(input: CreateProjectFromTemplateInput) {
+  const { agencyId } = await getCurrentUserAgency();
+
+  const { data: tpl, error: tplError } = await supabase
+    .from("projects")
+    .select("*, columns:project_columns(*)")
+    .eq("id", input.template_id)
+    .eq("agency_id", agencyId)
+    .single();
+
+  if (tplError || !tpl) throw new Error("Template não encontrado");
+
+  const { data: proj, error: projError } = await supabase
+    .from("projects")
+    .insert([{
+      agency_id: agencyId,
+      name: input.name,
+      client_id: input.client_id ?? null,
+      workspace_id: getLocalActiveWorkspaceId(),
+      status: "active",
+    }])
+    .select()
+    .single();
+
+  if (projError || !proj) throw new Error("Erro ao criar projeto");
+
+  for (const col of (tpl.columns ?? []) as Array<{ name: string; position: number }>) {
+    await supabase.from("project_columns").insert([{
+      agency_id: agencyId,
+      project_id: proj.id,
+      name: col.name,
+      position: col.position,
+    }]);
+  }
+
+  return proj;
 }
 
 export async function createProjectSpace(name: string, color?: string) {
@@ -864,4 +895,275 @@ export async function getSpaceFiles(spaceId: string) {
 
   if (error) throw error;
   return data ?? [];
+}
+
+// ── Subtask interfaces & functions ──────────────────────────────────────────
+
+export interface DbProjectTask {
+  id: string;
+  agency_id: string | null;
+  workspace_id: string | null;
+  project_id: string;
+  column_id: string | null;
+  parent_task_id: string | null;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  assignee_id: string | null;
+  due_date: string | null;
+  estimated_seconds: number;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getSubtasks(parentTaskId: string): Promise<DbProjectTask[]> {
+  const { data, error } = await supabase
+    .from("project_tasks")
+    .select("*")
+    .eq("parent_task_id", parentTaskId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as DbProjectTask[];
+}
+
+export async function createSubtask(
+  parentTaskId: string,
+  input: { title: string; project_id: string; priority?: string; assignee_id?: string; due_date?: string },
+): Promise<DbProjectTask> {
+  const { agencyId } = await getCurrentUserAgency();
+  const workspaceId = getLocalActiveWorkspaceId();
+
+  const { data, error } = await supabase
+    .from("project_tasks")
+    .insert({
+      agency_id: agencyId,
+      workspace_id: workspaceId,
+      project_id: input.project_id,
+      parent_task_id: parentTaskId,
+      title: input.title,
+      priority: input.priority ?? "medium",
+      status: "backlog",
+      assignee_id: input.assignee_id ?? null,
+      due_date: input.due_date ?? null,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as DbProjectTask;
+}
+
+export async function updateSubtask(
+  subtaskId: string,
+  input: Partial<Pick<DbProjectTask, "title" | "status" | "priority" | "assignee_id" | "due_date" | "estimated_seconds" | "completed_at">>,
+): Promise<DbProjectTask> {
+  const { data, error } = await supabase
+    .from("project_tasks")
+    .update({ ...input, updated_at: new Date().toISOString() })
+    .eq("id", subtaskId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as DbProjectTask;
+}
+
+export async function deleteSubtask(subtaskId: string): Promise<void> {
+  const { error } = await supabase.from("project_tasks").delete().eq("id", subtaskId);
+  if (error) throw error;
+}
+
+export async function convertChecklistToSubtask(
+  checklistItemId: string,
+  parentTaskId: string,
+  projectId: string,
+  title: string,
+): Promise<DbProjectTask> {
+  const subtask = await createSubtask(parentTaskId, { title, project_id: projectId });
+  await supabase.from("project_task_checklists").delete().eq("id", checklistItemId);
+  return subtask;
+}
+
+// ── Checklist DB functions ───────────────────────────────────────────────────
+
+export interface ChecklistItem {
+  id: string;
+  task_id: string;
+  title: string;
+  is_done: boolean;
+  position: number;
+  created_at: string;
+}
+
+export async function createChecklistItem(taskId: string, title: string): Promise<ChecklistItem> {
+  const { agencyId } = await getCurrentUserAgency();
+
+  const { data: existing } = await supabase
+    .from("project_task_checklists")
+    .select("position")
+    .eq("task_id", taskId)
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const nextPosition = ((existing as { position: number } | null)?.position ?? -1) + 1;
+
+  const { data, error } = await supabase
+    .from("project_task_checklists")
+    .insert({ task_id: taskId, agency_id: agencyId, title, is_done: false, position: nextPosition })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as ChecklistItem;
+}
+
+export async function updateChecklistItem(
+  itemId: string,
+  input: { title?: string; is_done?: boolean },
+): Promise<ChecklistItem> {
+  const { data, error } = await supabase
+    .from("project_task_checklists")
+    .update(input)
+    .eq("id", itemId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as ChecklistItem;
+}
+
+export async function deleteChecklistItem(itemId: string): Promise<void> {
+  const { error } = await supabase.from("project_task_checklists").delete().eq("id", itemId);
+  if (error) throw error;
+}
+
+export async function reorderChecklistItems(taskId: string, orderedIds: string[]): Promise<void> {
+  await Promise.all(
+    orderedIds.map((id, index) =>
+      supabase.from("project_task_checklists").update({ position: index }).eq("id", id).eq("task_id", taskId),
+    ),
+  );
+}
+
+// ── Task comments ────────────────────────────────────────────────────────────
+
+export interface TaskComment {
+  id: string;
+  agency_id: string;
+  workspace_id: string | null;
+  project_id: string;
+  task_id: string;
+  user_id: string | null;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  user?: { full_name: string | null; email: string | null };
+}
+
+export async function getTaskComments(taskId: string): Promise<TaskComment[]> {
+  const { data, error } = await supabase
+    .from("project_task_comments")
+    .select("*, user:users!user_id(full_name, email)")
+    .eq("task_id", taskId)
+    .order("created_at", { ascending: true });
+  if (error && error.code === "42P01") return [];
+  if (error) throw error;
+  return (data ?? []) as TaskComment[];
+}
+
+export async function createTaskComment(
+  taskId: string,
+  projectId: string,
+  content: string,
+): Promise<TaskComment> {
+  const { agencyId, userId } = await getCurrentUserAgency();
+  const workspaceId = getLocalActiveWorkspaceId();
+
+  const { data, error } = await supabase
+    .from("project_task_comments")
+    .insert({
+      agency_id: agencyId,
+      workspace_id: workspaceId,
+      project_id: projectId,
+      task_id: taskId,
+      user_id: userId,
+      content,
+    })
+    .select("*, user:users!user_id(full_name, email)")
+    .single();
+  if (error) throw error;
+  return data as TaskComment;
+}
+
+export async function deleteTaskComment(commentId: string): Promise<void> {
+  const { error } = await supabase.from("project_task_comments").delete().eq("id", commentId);
+  if (error) throw error;
+}
+
+// ── Space hierarchy functions ────────────────────────────────────────────────
+
+export interface ProjectSpace {
+  id: string;
+  agency_id: string;
+  workspace_id: string | null;
+  name: string;
+  color: string | null;
+  parent_space_id: string | null;
+  space_type: "space" | "folder";
+  position: number;
+  created_at: string;
+}
+
+export async function getRootSpaces(): Promise<ProjectSpace[]> {
+  const { agencyId } = await getCurrentUserAgency();
+  const workspaceId = getLocalActiveWorkspaceId();
+
+  let query = supabase
+    .from("project_spaces")
+    .select("*")
+    .eq("agency_id", agencyId)
+    .is("parent_space_id", null)
+    .order("position", { ascending: true });
+
+  if (workspaceId) query = query.eq("workspace_id", workspaceId);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as ProjectSpace[];
+}
+
+export async function getChildSpaces(parentSpaceId: string): Promise<ProjectSpace[]> {
+  const { data, error } = await supabase
+    .from("project_spaces")
+    .select("*")
+    .eq("parent_space_id", parentSpaceId)
+    .order("position", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as ProjectSpace[];
+}
+
+export async function createSpace(
+  name: string,
+  options?: { parentSpaceId?: string; icon?: string; color?: string },
+): Promise<ProjectSpace> {
+  const { agencyId } = await getCurrentUserAgency();
+  const workspaceId = getLocalActiveWorkspaceId();
+
+  const spaceType = options?.parentSpaceId ? "folder" : "space";
+
+  const { data, error } = await supabase
+    .from("project_spaces")
+    .insert({
+      agency_id: agencyId,
+      workspace_id: workspaceId,
+      name,
+      color: options?.color ?? "#6b7280",
+      parent_space_id: options?.parentSpaceId ?? null,
+      space_type: spaceType,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as ProjectSpace;
 }

@@ -2,11 +2,39 @@ import { supabase } from "./supabase";
 import { AutomationFlow } from "../data/mockAutomations";
 import { getCurrentUserAgency } from "@/lib/auth";
 
+export interface AutomationRun {
+  id: string;
+  agency_id: string;
+  flow_id: string | null;
+  client_id: string | null;
+  contract_id: string | null;
+  status: "running" | "awaiting_form" | "awaiting_signature" | "completed" | "failed" | "cancelled";
+  current_step_index: number;
+  context: Record<string, unknown>;
+  error_message: string | null;
+  started_at: string;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface AutomationStepLog {
+  id: string;
+  run_id: string;
+  step_id: string;
+  step_type: string;
+  status: "pending" | "running" | "completed" | "skipped" | "failed";
+  message: string | null;
+  output: Record<string, unknown>;
+  executed_at: string;
+}
+
 export const automationsService = {
   async getFlows() {
+    const { agencyId } = await getCurrentUserAgency();
     const { data, error } = await supabase
       .from("automation_flows")
-      .select("*, steps:automation_steps(*)");
+      .select("*, steps:automation_steps(*)")
+      .eq("agency_id", agencyId);
 
     if (error) {
       console.error("Error fetching flows:", error);
@@ -19,6 +47,7 @@ export const automationsService = {
       name: flow.name,
       description: flow.description,
       mode: flow.mode,
+      trigger: flow.trigger ?? undefined,
       status: flow.is_active ? "active" : "draft",
       createdAt: flow.created_at,
       updatedAt: flow.updated_at,
@@ -51,6 +80,7 @@ export const automationsService = {
         name: flow.name,
         description: flow.description,
         mode: flow.mode,
+        trigger: flow.trigger ?? null,
         is_active: flow.status === "active",
         updated_at: new Date().toISOString(),
       })
@@ -88,5 +118,71 @@ export const automationsService = {
     }
 
     return realFlowId;
+  },
+
+  async triggerFlow(params: {
+    trigger: string;
+    clientId?: string;
+    contractId?: string;
+    context?: Record<string, unknown>;
+  }) {
+    const { agencyId } = await getCurrentUserAgency();
+    const { data, error } = await supabase.functions.invoke("automation-execute", {
+      body: {
+        action: "trigger",
+        trigger: params.trigger,
+        agencyId,
+        clientId: params.clientId,
+        contractId: params.contractId,
+        context: params.context ?? {},
+      },
+    });
+    if (error) throw error;
+    return data as { status: string; runIds: string[]; logs: string[] };
+  },
+
+  async resumeFlow(runId: string, context?: Record<string, unknown>) {
+    const { data, error } = await supabase.functions.invoke("automation-execute", {
+      body: { action: "resume", runId, context: context ?? {} },
+    });
+    if (error) throw error;
+    return data as { status: string; runId: string; logs: string[] };
+  },
+
+  async sendColumnNotification(params: {
+    agencyId: string;
+    columnId: string;
+    taskId?: string;
+  }) {
+    const { data, error } = await supabase.functions.invoke("automation-execute", {
+      body: {
+        action: "column_notification",
+        agencyId: params.agencyId,
+        columnId: params.columnId,
+        taskId: params.taskId,
+      },
+    });
+    if (error) throw error;
+    return data as { status: string; logs: string[] };
+  },
+
+  async getRunsForClient(clientId: string): Promise<AutomationRun[]> {
+    const { data, error } = await supabase
+      .from("automation_runs")
+      .select("*")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as AutomationRun[];
+  },
+
+  async getStepLogs(runId: string): Promise<AutomationStepLog[]> {
+    const { data, error } = await supabase
+      .from("automation_step_logs")
+      .select("*")
+      .eq("run_id", runId)
+      .order("executed_at", { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as AutomationStepLog[];
   },
 };

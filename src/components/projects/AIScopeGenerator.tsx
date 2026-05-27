@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { agentService } from "@/services/agentService";
 
 interface AIScopeGeneratorProps {
   projectId: string;
@@ -24,57 +25,42 @@ export function AIScopeGenerator({ projectId, onApplyTasks }: AIScopeGeneratorPr
   const [loading, setLoading] = useState(false);
   const [generatedResult, setGeneratedResult] = useState<ProjectTask[] | null>(null);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!prompt.trim()) return;
 
     setLoading(true);
     setGeneratedResult(null);
 
-    // Simulating OpenAI/Anthropic call
-    setTimeout(() => {
-      const generatedTasks: ProjectTask[] = [
-        {
-          id: `ai-1-${Date.now()}`,
-          projectId,
-          columnId: "col-1",
-          status: "backlog",
-          title: "Definir avatar da campanha",
-          description:
-            "Gerado por IA: Pesquisa de mercado e definição das dores e desejos do público alvo.",
-          assignee: "AI",
-          dueDate: new Date(Date.now() + 86400000 * 2).toISOString().split("T")[0],
-          priority: "high",
-          checklist: [
-            { id: "ai-c-1", title: "Entrevistar clientes", done: false },
-            { id: "ai-c-2", title: "Mapear objeções", done: false },
-          ],
-          tags: ["Estratégia"],
-          comments: [],
-          activity: [],
-        },
-        {
-          id: `ai-2-${Date.now()}`,
-          projectId,
-          columnId: "col-1",
-          status: "backlog",
-          title: "Criar página de captura",
-          description: "Gerado por IA: Desenvolvimento da landing page de registro.",
-          assignee: "AI",
-          dueDate: new Date(Date.now() + 86400000 * 5).toISOString().split("T")[0],
-          priority: "urgent",
-          checklist: [
-            { id: "ai-c-3", title: "Copy", done: false },
-            { id: "ai-c-4", title: "Design", done: false },
-          ],
-          tags: ["Design", "Web"],
-          comments: [],
-          activity: [],
-        },
-      ];
-      setGeneratedResult(generatedTasks);
+    try {
+      const result = await agentService.suggestActions("projects");
+      const tasks: ProjectTask[] = result.actions.slice(0, 8).map((action, i) => ({
+        id: `ai-${i}-${Date.now()}`,
+        projectId,
+        columnId: "col-1",
+        status: "backlog",
+        title: action.title,
+        description: action.description ?? `Gerado por IA a partir do escopo: "${prompt.slice(0, 80)}"`,
+        assignee: "",
+        dueDate: new Date(Date.now() + 86400000 * (i + 2)).toISOString().split("T")[0],
+        priority: i === 0 ? "high" : "medium",
+        checklist: action.preview_items.slice(0, 4).map((item, j) => ({
+          id: `ai-c-${i}-${j}`,
+          title: item,
+          done: false,
+        })),
+        tags: ["IA"],
+        comments: [],
+        activity: [],
+      }));
+
+      if (tasks.length === 0) throw new Error("Nenhuma tarefa sugerida.");
+      setGeneratedResult(tasks);
+      toast.success("Escopo gerado com sucesso!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao gerar escopo. Verifique se o Agente de IA está configurado em Configurações.");
+    } finally {
       setLoading(false);
-      toast.success("Estrutura gerada com sucesso!");
-    }, 2500);
+    }
   };
 
   const handleApply = () => {

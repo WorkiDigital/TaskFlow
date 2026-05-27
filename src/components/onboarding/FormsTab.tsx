@@ -172,10 +172,29 @@ export function FormsTab({
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    navigator.clipboard.writeText(
-                      `${window.location.origin}/form/${selectedForm.id}`,
-                    );
-                    toast.success("Link público copiado!");
+                    const url = `${window.location.origin}/form/${selectedForm.id}`;
+                    if (navigator.clipboard?.writeText) {
+                      navigator.clipboard.writeText(url).then(
+                        () => toast.success("Link público copiado!"),
+                        () => {
+                          const el = document.createElement("textarea");
+                          el.value = url;
+                          document.body.appendChild(el);
+                          el.select();
+                          document.execCommand("copy");
+                          document.body.removeChild(el);
+                          toast.success("Link público copiado!");
+                        },
+                      );
+                    } else {
+                      const el = document.createElement("textarea");
+                      el.value = url;
+                      document.body.appendChild(el);
+                      el.select();
+                      document.execCommand("copy");
+                      document.body.removeChild(el);
+                      toast.success("Link público copiado!");
+                    }
                   }}
                   className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
                 >

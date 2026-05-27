@@ -1,11 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
+import {
+  corsHeaders,
+  getSupabaseAdmin,
+  normalizePhone,
+  renderTemplate,
+  requestEvolution,
+  getInstanceApiKey,
+} from "../_shared/helpers.ts";
+import { executeStep } from "../_shared/executeStep.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// ── Types ────────────────────────────────────────────────────────────────────
 
 type FlowStep = {
   id: string;
@@ -46,19 +51,7 @@ type ContractTemplateRow = {
   content: string;
 };
 
-function getSupabaseAdmin() {
-  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-  return createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    supabaseKey,
-    { global: { headers: { Authorization: `Bearer ${supabaseKey}` } } },
-  );
-}
-
-type AuthContext = {
-  userId: string;
-  agencyId: string;
-};
+// ── Auth helpers (onboarding-specific — not shared) ──────────────────────────
 
 function getBearerToken(req: Request) {
   const header = req.headers.get("authorization") ?? "";
@@ -66,131 +59,36 @@ function getBearerToken(req: Request) {
   return match?.[1] ?? "";
 }
 
-async function getOptionalAuthContext(
-  req: Request,
-  supabase: ReturnType<typeof getSupabaseAdmin>,
-): Promise<AuthContext | null> {
+async function getOptionalAuthContext(req: Request, supabase: ReturnType<typeof getSupabaseAdmin>) {
   const token = getBearerToken(req);
   if (!token) return null;
-
-  const { data: authData, error: authError } = await supabase.auth.getUser(token);
-  if (authError || !authData.user) return null;
-
+  const { data: authData, error } = await supabase.auth.getUser(token);
+  if (error || !authData.user) return null;
   const { data: userRow } = await supabase
-    .from("users")
-    .select("agency_id")
-    .eq("id", authData.user.id)
-    .maybeSingle<{ agency_id: string | null }>();
-
+    .from("users").select("agency_id").eq("id", authData.user.id).maybeSingle<{ agency_id: string | null }>();
   if (!userRow?.agency_id) return null;
   return { userId: authData.user.id, agencyId: userRow.agency_id };
 }
 
-function normalizePhone(value?: string | null) {
-  return String(value ?? "").replace(/\D/g, "");
-}
-
-function uniqueValues(values: string[]) {
-  return [...new Set(values.filter(Boolean))];
-}
-
-function renderTemplate(template: string, variables: Record<string, string>) {
-  return template.replace(/\{\{([^}]+)\}\}/g, (_, key) => variables[String(key).trim()] ?? "");
-}
-
-async function requestEvolution(url: string, apiKey: string, init?: RequestInit) {
-  const response = await fetch(url, {
-    ...init,
-    headers: {
-      apikey: apiKey,
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-  });
-  const responseText = await response.text();
-  const payload = responseText ? JSON.parse(responseText) : {};
-
-  if (!response.ok) {
-    const message = payload?.response?.message ?? payload?.message ?? payload?.error;
-    const detail = Array.isArray(message) ? message.join(" ") : message;
-    throw new Error(detail ?? `Evolution API retornou HTTP ${response.status}: ${responseText || response.statusText}`);
-  }
-
-  return payload;
-}
-
-async function requestAutentique(token: string, formData: FormData) {
-  const response = await fetch("https://api.autentique.com.br/v2/graphql", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    body: formData,
-  });
-  const payload = await response.json().catch(() => ({}));
-
-  if (!response.ok || payload.errors) {
-    const message = Array.isArray(payload.errors)
-      ? payload.errors.map((item: { message?: string }) => item.message).filter(Boolean).join(" ")
-      : payload.message;
-    throw new Error(message || `Autentique retornou HTTP ${response.status}`);
-  }
-
-  return payload;
-}
-
-async function getInstanceApiKey(baseUrl: string, globalApiKey: string, instanceName: string) {
-  const payload = await requestEvolution(
-    `${baseUrl}/instance/fetchInstances?instanceName=${encodeURIComponent(instanceName)}`,
-    globalApiKey,
-  );
-
-  if (!Array.isArray(payload) && typeof payload === "object") {
-    return String(payload?.token ?? payload?.apikey ?? payload?.instance?.apikey ?? payload?.instance?.token ?? globalApiKey);
-  }
-
-  const instances = Array.isArray(payload) ? payload : Array.isArray(payload?.value) ? payload.value : [];
-  const match = instances.find((item: Record<string, unknown>) => {
-    const instance = item.instance as Record<string, unknown> | undefined;
-    return instance?.instanceName === instanceName || item.name === instanceName;
-  });
-  const instance = match?.instance as Record<string, unknown> | undefined;
-
-  return String(instance?.apikey ?? instance?.token ?? match?.token ?? match?.apikey ?? globalApiKey);
-}
-
-function extractGroupJid(payload: Record<string, unknown>) {
-  const candidates = [
-    payload.jid,
-    payload.id,
-    payload.groupJid,
-    payload.remoteJid,
-    (payload.group as Record<string, unknown> | undefined)?.jid,
-    (payload.group as Record<string, unknown> | undefined)?.id,
-  ];
-  return candidates.map(value => String(value ?? "")).find(value => value.endsWith("@g.us")) ?? "";
-}
-
-function getMessage(state: WorkspaceState, id: string, fallback: string) {
-  return state.messages?.find(message => message.id === id)?.body ?? fallback;
-}
+// ── Onboarding-specific helpers ──────────────────────────────────────────────
 
 function getPayloadValues(payload: Record<string, unknown>) {
   return Object.fromEntries(Object.entries(payload).map(([key, item]) => {
     const value = item && typeof item === "object" && "value" in item
-      ? (item as { value?: unknown }).value
-      : item;
+      ? (item as { value?: unknown }).value : item;
     return [key, String(value ?? "")];
   }));
 }
 
 function getDefaultFormId(state: WorkspaceState, type: "contractual" | "briefing") {
   const forms = state.formTemplates ?? [];
-  return forms.find(form => form.type === type && form.isDefault)?.id
-    ?? forms.find(form => form.type === type)?.id
+  return forms.find(f => f.type === type && f.isDefault)?.id
+    ?? forms.find(f => f.type === type)?.id
     ?? (type === "contractual" ? "form_contractual_default" : "form_briefing_default");
 }
 
 function getFormType(state: WorkspaceState, formId: string): "contractual" | "briefing" {
-  const form = state.formTemplates?.find(item => item.id === formId);
+  const form = state.formTemplates?.find(f => f.id === formId);
   if (form?.type) return form.type;
   return formId.includes("briefing") ? "briefing" : "contractual";
 }
@@ -215,29 +113,35 @@ function getDefaultContractTemplate() {
 }
 
 function makeContractFile(content: string) {
-  const doc = new jsPDF({
-    orientation: "portrait",
-    unit: "mm",
-    format: "a4"
-  });
-  
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const lines = doc.splitTextToSize(content, 180);
   let y = 15;
   const pageHeight = doc.internal.pageSize.height;
-  
   for (const line of lines) {
-    if (y > pageHeight - 20) {
-      doc.addPage();
-      y = 15;
-    }
+    if (y > pageHeight - 20) { doc.addPage(); y = 15; }
     doc.text(line, 15, y);
     y += 7;
   }
-  
-  const arrayBuffer = doc.output("arraybuffer");
-  return new Blob([arrayBuffer], { type: "application/pdf" });
+  return new Blob([doc.output("arraybuffer")], { type: "application/pdf" });
 }
 
+async function requestAutentique(token: string, formData: FormData) {
+  const resp = await fetch("https://api.autentique.com.br/v2/graphql", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  const payload = await resp.json().catch(() => ({}));
+  if (!resp.ok || payload.errors) {
+    const msg = Array.isArray(payload.errors)
+      ? payload.errors.map((e: { message?: string }) => e.message).filter(Boolean).join(" ")
+      : payload.message;
+    throw new Error(msg || `Autentique HTTP ${resp.status}`);
+  }
+  return payload;
+}
+
+// logStep writes to onboarding_step_logs (different from automation_step_logs)
 async function logStep(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   runId: string,
@@ -249,16 +153,15 @@ async function logStep(
   const { data, error } = await supabase
     .from("onboarding_step_logs")
     .insert({ run_id: runId, step_id: step.id, step_name: step.name, status, message, metadata })
-    .select()
-    .single();
+    .select().single();
   if (error) throw error;
   return data;
 }
 
+// ── Main handler ──────────────────────────────────────────────────────────────
+
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const supabase = getSupabaseAdmin();
   let runId = "";
@@ -295,23 +198,18 @@ serve(async (req) => {
 
     if (!["start", "form_submitted"].includes(action)) throw new Error("Acao invalida para onboarding-execute.");
     if (action === "start" && !authContext) {
-      return new Response(
-        JSON.stringify({ error: "Nao autenticado para iniciar onboarding." }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 },
-      );
+      return new Response(JSON.stringify({ error: "Nao autenticado para iniciar onboarding." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 });
     }
 
     const { data: workspaceRow, error: workspaceError } = await supabase
-      .from("onboarding_workspace")
-      .select("state")
-      .eq("id", "default")
-      .maybeSingle<{ state: WorkspaceState }>();
+      .from("onboarding_workspace").select("state").eq("id", "default").maybeSingle<{ state: WorkspaceState }>();
     if (workspaceError) throw workspaceError;
 
     const state = workspaceRow?.state ?? {};
     const steps = (state.flowSteps ?? [])
-      .filter(step => step.enabled)
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      .filter((s: FlowStep) => s.enabled)
+      .sort((a: FlowStep, b: FlowStep) => (a.order ?? 0) - (b.order ?? 0));
 
     if (steps.length === 0) throw new Error("Nenhuma etapa ativa no onboarding.");
 
@@ -319,14 +217,12 @@ serve(async (req) => {
     if (action === "form_submitted") {
       if (!formId) throw new Error("Informe formId para registrar o formulario.");
       const { error: submissionError } = await supabase
-        .from("form_submissions")
-        .insert({ form_id: formId, client_id: clientId || null, payload });
+        .from("form_submissions").insert({ form_id: formId, client_id: clientId || null, payload });
       if (submissionError) throw submissionError;
 
       if (!clientId) {
         return new Response(JSON.stringify({
-          runId: null,
-          status: "received",
+          runId: null, status: "received",
           logs: [{ status: "completed", message: "Formulario recebido, mas sem cliente vinculado para continuar automacao." }],
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
       }
@@ -345,57 +241,58 @@ serve(async (req) => {
     }
 
     const { data: client, error: clientError } = await supabase
-      .from("clients")
-      .select("id, name, email, phone, address, whatsapp_group_id, agency_id")
-      .eq("id", clientId)
-      .single<ClientRow>();
+      .from("clients").select("id, name, email, phone, address, whatsapp_group_id, agency_id")
+      .eq("id", clientId).single<ClientRow>();
     if (clientError || !client) throw new Error("Cliente nao encontrado.");
 
     const agencyId = client.agency_id ?? null;
     if (authContext && agencyId && authContext.agencyId !== agencyId) {
-      return new Response(
-        JSON.stringify({ error: "Cliente nao pertence a agencia do usuario autenticado." }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 },
-      );
+      return new Response(JSON.stringify({ error: "Cliente nao pertence a agencia do usuario autenticado." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 });
     }
     if (action === "start" && (!agencyId || authContext?.agencyId !== agencyId)) {
-      return new Response(
-        JSON.stringify({ error: "Sem permissao para iniciar onboarding deste cliente." }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 },
-      );
+      return new Response(JSON.stringify({ error: "Sem permissao para iniciar onboarding deste cliente." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 });
     }
 
-    // Pause/resume: on form_submitted look for an existing awaiting_form run
+    // Pause/resume: on form_submitted look for existing awaiting_form run
     let run: { id: string; context: Record<string, unknown> } | null = null;
     let runContext: Record<string, unknown> = { instanceName, action, formId: formId || null, agencyId };
 
     if (action === "form_submitted") {
       const { data: existingRun } = await supabase
-        .from("onboarding_runs")
-        .select("id, context")
-        .eq("client_id", clientId)
-        .eq("status", "awaiting_form")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
+        .from("onboarding_runs").select("id, context")
+        .eq("client_id", clientId).eq("status", "awaiting_form")
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
       if (existingRun) {
         run = existingRun as { id: string; context: Record<string, unknown> };
         runId = existingRun.id;
         runContext = { ...(existingRun.context ?? {}), resumedAt: new Date().toISOString(), formId, action };
-        await supabase
-          .from("onboarding_runs")
-          .update({ status: "running", context: runContext })
-          .eq("id", runId);
+        await supabase.from("onboarding_runs").update({ status: "running", context: runContext }).eq("id", runId);
       }
     }
 
     if (!run) {
+      // Concurrency lock: if a run is already active for this client, return it instead of creating a duplicate
+      if (action === "start") {
+        const { data: activeRun } = await supabase
+          .from("onboarding_runs")
+          .select("id, status, context")
+          .eq("client_id", clientId)
+          .in("status", ["running", "awaiting_form"])
+          .limit(1)
+          .maybeSingle<{ id: string; status: string; context: Record<string, unknown> }>();
+        if (activeRun) {
+          return new Response(JSON.stringify({ runId: activeRun.id, status: activeRun.status, logs: [] }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200,
+          });
+        }
+      }
+
       const { data: newRun, error: runError } = await supabase
         .from("onboarding_runs")
         .insert({ client_id: client.id, agency_id: agencyId, status: "running", context: runContext })
-        .select()
-        .single();
+        .select().single();
       if (runError) throw runError;
       run = newRun as { id: string; context: Record<string, unknown> };
       runId = newRun.id;
@@ -404,8 +301,8 @@ serve(async (req) => {
     const { data: settings, error: settingsError } = await supabase
       .from("agency_settings")
       .select("name, evolution_api_url, evolution_api_key, autentique_token")
-      .limit(1)
-      .single<AgencySettings>();
+      .eq("agency_id", agencyId ?? authContext?.agencyId ?? "")
+      .limit(1).single<AgencySettings>();
     if (settingsError || !settings?.evolution_api_url || !settings?.evolution_api_key) {
       throw new Error("Credenciais da Evolution API nao encontradas em agency_settings.");
     }
@@ -415,6 +312,7 @@ serve(async (req) => {
     const instanceApiKey = await getInstanceApiKey(baseUrl, globalApiKey, instanceName);
     const clientPhone = normalizePhone(client.phone);
     let clientGroupJid = client.whatsapp_group_id ?? "";
+    let currentContext: Record<string, unknown> = { ...runContext, ...submissionValues };
     let generatedContract: { id: string; content: string; signerEmail: string; signerName: string } | null = null;
 
     const variables: Record<string, string> = {
@@ -425,27 +323,27 @@ serve(async (req) => {
       nome_agencia: settings.name ?? "Agencia",
       nome_projeto: `Projeto ${client.address || client.name}`,
       link_formulario_contrato: resolvedOrigin
-        ? `${String(resolvedOrigin).replace(/\/$/, "")}/form/${getDefaultFormId(state, "contractual")}?clientId=${client.id}`
+        ? `${resolvedOrigin.replace(/\/$/, "")}/form/${getDefaultFormId(state, "contractual")}?clientId=${client.id}`
         : "",
       link_formulario_briefing: resolvedOrigin
-        ? `${String(resolvedOrigin).replace(/\/$/, "")}/form/${getDefaultFormId(state, "briefing")}?clientId=${client.id}`
+        ? `${resolvedOrigin.replace(/\/$/, "")}/form/${getDefaultFormId(state, "briefing")}?clientId=${client.id}`
         : "",
-      link_google_drive: "",
       ...submissionValues,
     };
 
-    async function sendText(number: string, text: string, linkPreview = true) {
+    function sendText(number: string, text: string) {
       return requestEvolution(`${baseUrl}/message/sendText/${instanceName}`, instanceApiKey, {
         method: "POST",
-        body: JSON.stringify({ number, text, delay: 1200, linkPreview }),
+        body: JSON.stringify({ number, text, delay: 1200, linkPreview: true }),
       });
     }
 
+    // Determine start step for resumed runs
     let executableSteps = steps;
     if (action === "form_submitted") {
       const receivedFormType = getFormType(state, formId);
-      const awaitStepId = receivedFormType === "briefing" ? "await_briefing_form" : "await_contractual_form";
-      const awaitStepIndex = steps.findIndex(step => step.id === awaitStepId);
+      const awaitStepId = receivedFormType === "briefing" ? "wait_briefing_form" : "wait_contract_form";
+      const awaitStepIndex = steps.findIndex((s: FlowStep) => s.id === awaitStepId);
       if (awaitStepIndex >= 0) {
         const awaitStep = steps[awaitStepIndex];
         logs.push(await logStep(supabase, runId, awaitStep, "completed", "Formulario recebido. Automacao retomada.", { formId }));
@@ -453,104 +351,46 @@ serve(async (req) => {
       }
     }
 
+    // ── Step execution loop ──────────────────────────────────────────────────
     for (const step of executableSteps) {
       logs.push(await logStep(supabase, runId, step, "running", "Executando etapa..."));
 
       try {
-        if (step.id === "send_contractual_form") {
-          if (!clientPhone) throw new Error("Cliente sem telefone para envio do formulario contratual.");
-          const template = getMessage(state, "msg_send_contractual", "Ola, {{nome_cliente}}! Vamos iniciar seu onboarding: {{link_formulario_contrato}}");
-          const text = renderTemplate(
-            template
-              .replace("[Clique aqui para preencher]", "{{link_formulario_contrato}}")
-              .replace("[link em configuracao]", "{{link_formulario_contrato}}"),
-            variables,
-          );
-          await sendText(clientPhone, text);
-          logs.push(await logStep(supabase, runId, step, "completed", "Formulario contratual enviado por WhatsApp."));
 
-        } else if (step.id === "await_contractual_form" || step.id === "await_briefing_form") {
-          // Pause: mark run as awaiting_form and stop executing further steps
-          const awaitingFormType = step.id.includes("briefing") ? "briefing" : "contractual";
-          await supabase
-            .from("onboarding_runs")
-            .update({
-              status: "awaiting_form",
-              context: { ...runContext, awaitingStep: step.id, awaitingFormType },
-            })
-            .eq("id", runId);
-          logs.push(await logStep(supabase, runId, step, "skipped",
-            "Fluxo pausado. Aguardando preenchimento do formulario antes de continuar."));
-          pausedForForm = true;
-          break;
-
-        } else if (step.id === "generate_contract") {
-          const { data: template, error: templateError } = await supabase
-            .from("contract_templates")
-            .select("id, name, content")
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle<ContractTemplateRow>();
-          if (templateError) throw templateError;
-
+        // ── generate_contract — onboarding-exclusive (jsPDF + Autentique) ───
+        if (step.id === "generate_contract") {
+          const { data: template } = await supabase
+            .from("contract_templates").select("id, name, content")
+            .order("created_at", { ascending: false }).limit(1).maybeSingle<ContractTemplateRow>();
           const content = renderTemplate(template?.content ?? getDefaultContractTemplate(), variables);
           const signerEmail = String(variables.email_cliente || client.email || "").trim();
           const signerName = String(variables.nome_cliente || client.name).trim();
-
           const { data: contract, error: contractError } = await supabase
             .from("contracts")
-            .insert({
-              client_id: client.id,
-              agency_id: agencyId,
-              template_id: template?.id ?? null,
-              status: "draft",
-              content,
-              signer_name: signerName,
-              signer_email: signerEmail,
-            })
-            .select("id, content, signer_email, signer_name")
-            .single<{ id: string; content: string; signer_email: string | null; signer_name: string | null }>();
+            .insert({ client_id: client.id, agency_id: agencyId, template_id: template?.id ?? null, status: "draft", content, signer_name: signerName, signer_email: signerEmail })
+            .select("id, content, signer_email, signer_name").single<{ id: string; content: string; signer_email: string | null; signer_name: string | null }>();
           if (contractError) throw contractError;
+          generatedContract = { id: contract.id, content: contract.content, signerEmail: contract.signer_email ?? signerEmail, signerName: contract.signer_name ?? signerName };
+          logs.push(await logStep(supabase, runId, step, "completed", "Contrato gerado e salvo no banco.", { contractId: generatedContract.id, templateId: template?.id ?? "default" }));
 
-          generatedContract = {
-            id: contract.id,
-            content: contract.content,
-            signerEmail: contract.signer_email ?? signerEmail,
-            signerName: contract.signer_name ?? signerName,
-          };
-          logs.push(await logStep(supabase, runId, step, "completed", "Contrato gerado e salvo no banco.", {
-            contractId: generatedContract.id,
-            templateId: template?.id ?? "default",
-          }));
-
+        // ── send_contract_signature — onboarding-exclusive (Autentique GraphQL) ─
         } else if (step.id === "send_contract_signature") {
           if (!settings.autentique_token) {
             hadSkippedRequiredStep = true;
-            logs.push(await logStep(supabase, runId, step, "skipped", "Autentique ainda nao configurado para envio real."));
+            logs.push(await logStep(supabase, runId, step, "skipped", "Autentique ainda nao configurado."));
             continue;
           }
-
           if (!generatedContract) {
-            const { data: latestContract, error: latestContractError } = await supabase
-              .from("contracts")
-              .select("id, content, signer_email, signer_name")
-              .eq("client_id", client.id)
-              .order("created_at", { ascending: false })
-              .limit(1)
+            const { data: latest } = await supabase
+              .from("contracts").select("id, content, signer_email, signer_name")
+              .eq("client_id", client.id).order("created_at", { ascending: false }).limit(1)
               .maybeSingle<{ id: string; content: string | null; signer_email: string | null; signer_name: string | null }>();
-            if (latestContractError) throw latestContractError;
-            if (latestContract?.id && latestContract.content) {
-              generatedContract = {
-                id: latestContract.id,
-                content: latestContract.content,
-                signerEmail: latestContract.signer_email ?? client.email ?? "",
-                signerName: latestContract.signer_name ?? client.name,
-              };
+            if (latest?.id && latest.content) {
+              generatedContract = { id: latest.id, content: latest.content, signerEmail: latest.signer_email ?? client.email ?? "", signerName: latest.signer_name ?? client.name };
             }
           }
-
           if (!generatedContract?.content) throw new Error("Nenhum contrato gerado para envio ao Autentique.");
-          if (!generatedContract.signerEmail) throw new Error("Cliente sem e-mail para assinatura no Autentique.");
+          if (!generatedContract.signerEmail) throw new Error("Cliente sem e-mail para assinatura.");
 
           const operations = {
             query: `mutation CreateDocumentMutation($document: DocumentInput!, $signers: [SignerInput!]!, $file: Upload!) {
@@ -567,280 +407,78 @@ serve(async (req) => {
           };
           const formData = new FormData();
           formData.append("operations", JSON.stringify(operations));
-          // Numeric key "0" per GraphQL multipart upload spec
           formData.append("map", JSON.stringify({ "0": ["variables.file"] }));
           formData.append("0", makeContractFile(generatedContract.content), `contrato-${generatedContract.id}.pdf`);
 
           const autentiquePayload = await requestAutentique(settings.autentique_token, formData);
           const document = autentiquePayload?.data?.createDocument ?? {};
           const signatureUrl = document?.signatures?.[0]?.link?.short_link ?? null;
+          await supabase.from("contracts").update({ status: "sent", autentique_document_id: document.id ?? null, signature_url: signatureUrl, updated_at: new Date().toISOString() }).eq("id", generatedContract.id);
+          logs.push(await logStep(supabase, runId, step, "completed", "Contrato enviado ao Autentique.", { contractId: generatedContract.id, signatureUrl }));
 
-          await supabase
-            .from("contracts")
-            .update({
-              status: "sent",
-              autentique_document_id: document.id ?? null,
-              signature_url: signatureUrl,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", generatedContract.id);
-
-          logs.push(await logStep(supabase, runId, step, "completed", "Contrato enviado para assinatura no Autentique.", {
-            contractId: generatedContract.id,
-            documentId: document.id ?? null,
-            signatureUrl,
-          }));
-
-        } else if (step.id === "confirm_contract_sent_client_group") {
-          if (!clientGroupJid) {
+        // ── send_7_day_plan — onboarding-exclusive ───────────────────────────
+        } else if (step.id === "send_7_day_plan") {
+          const { data: latestDeal } = await supabase
+            .from("client_deals").select("id, services(default_onboarding_plan_id)")
+            .eq("client_id", client.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+          const planId = (latestDeal?.services as unknown as { default_onboarding_plan_id: string })?.default_onboarding_plan_id;
+          if (!planId) {
             hadSkippedRequiredStep = true;
-            logs.push(await logStep(supabase, runId, step, "skipped", "Grupo sem JID — confirmacao nao enviada."));
+            logs.push(await logStep(supabase, runId, step, "skipped", "Nenhum plano de 7 dias vinculado ao servico do cliente."));
             continue;
           }
-          const { data: contract } = await supabase
-            .from("contracts")
-            .select("signature_url")
-            .eq("client_id", client.id)
-            .in("status", ["sent", "pending"])
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle<{ signature_url: string | null }>();
-
-          const signatureUrl = contract?.signature_url ?? null;
-          if (!signatureUrl) {
+          const { data: planSteps } = await supabase
+            .from("service_onboarding_plan_steps").select("*").eq("plan_id", planId).order("day_number", { ascending: true });
+          if (!planSteps?.length) {
             hadSkippedRequiredStep = true;
-            logs.push(await logStep(supabase, runId, step, "skipped", "Contrato ainda sem link de assinatura gerado."));
+            logs.push(await logStep(supabase, runId, step, "skipped", "Plano de 7 dias vazio."));
             continue;
           }
-          const msgTemplate = getMessage(state, "msg_contract_sent",
-            "Ola {{nome_cliente}}! Seu contrato esta pronto para assinatura: {{link_assinatura}}");
-          const text = renderTemplate(msgTemplate, { ...variables, link_assinatura: signatureUrl });
-          await sendText(clientGroupJid, text);
-          logs.push(await logStep(supabase, runId, step, "completed",
-            "Link de assinatura enviado ao grupo do cliente.", { signatureUrl }));
+          let planMessage = "Este é o roteiro dos seus próximos dias conosco:\n\n";
+          for (const ps of planSteps) planMessage += `*Dia ${ps.day_number}:* ${ps.title}\n`;
+          const renderedMsg = renderTemplate(planMessage, variables);
+          const dest = clientGroupJid || (clientPhone ? clientPhone : null);
+          if (!dest) throw new Error("Cliente sem grupo ou telefone configurado para receber o roteiro.");
+          await sendText(dest, renderedMsg);
+          logs.push(await logStep(supabase, runId, step, "completed", `Roteiro de 7 dias enviado para ${dest}.`));
 
-        } else if (step.id === "create_whatsapp_group") {
-          const config = step.config ?? {};
-          const participants = uniqueValues([
-            ...(Array.isArray(config.participants) ? config.participants.map(String) : []),
-            clientPhone,
-          ].map(normalizePhone));
-          const subject = renderTemplate(String(config.groupName ?? "Projeto {{nome_projeto}}"), variables);
-          const description = renderTemplate(String(config.description ?? "Grupo oficial de acompanhamento do projeto."), variables);
-
-          if (participants.length < 1) throw new Error("Nenhum participante valido para criar o grupo.");
-
-          const groupPayload = await requestEvolution(`${baseUrl}/group/create/${instanceName}`, instanceApiKey, {
-            method: "POST",
-            body: JSON.stringify({ subject, description, participants }),
-          });
-
-          clientGroupJid = extractGroupJid(groupPayload as Record<string, unknown>);
-          if (clientGroupJid) {
-            await supabase.from("clients").update({ whatsapp_group_id: clientGroupJid }).eq("id", client.id);
-          }
-          logs.push(await logStep(supabase, runId, step, "completed",
-            "Grupo do cliente criado na Evolution API.", { groupJid: clientGroupJid, subject }));
-
-        } else if (step.id === "add_participants") {
-          if (!clientGroupJid) {
-            hadSkippedRequiredStep = true;
-            logs.push(await logStep(supabase, runId, step, "skipped", "Grupo sem JID — participantes nao podem ser adicionados."));
-            continue;
-          }
-          const extraParticipants = uniqueValues(
-            (Array.isArray(step.config?.participants) ? (step.config!.participants as unknown[]).map(String) : [])
-              .map(normalizePhone)
-          ).filter(p => p && p !== clientPhone);
-
-          if (extraParticipants.length > 0) {
-            await requestEvolution(`${baseUrl}/group/updateParticipant/${instanceName}`, instanceApiKey, {
-              method: "POST",
-              body: JSON.stringify({ groupJid: clientGroupJid, action: "add", participants: extraParticipants }),
-            });
-            logs.push(await logStep(supabase, runId, step, "completed",
-              `${extraParticipants.length} participante(s) adicional(is) adicionado(s) ao grupo.`,
-              { groupJid: clientGroupJid, extraParticipants }));
-          } else {
-            logs.push(await logStep(supabase, runId, step, "completed",
-              "Nenhum participante extra configurado. Cliente ja foi adicionado na criacao do grupo."));
-          }
-
-        } else if (step.id === "update_group_description") {
-          if (!clientGroupJid) {
-            hadSkippedRequiredStep = true;
-            logs.push(await logStep(supabase, runId, step, "skipped", "Grupo sem JID — descricao nao pode ser atualizada."));
-            continue;
-          }
-          const description = renderTemplate(
-            String(step.config?.description ?? "Grupo oficial de acompanhamento do projeto {{nome_projeto}}."),
-            variables,
-          );
-          await requestEvolution(`${baseUrl}/group/updateGroupDescription/${instanceName}`, instanceApiKey, {
-            method: "POST",
-            body: JSON.stringify({ groupJid: clientGroupJid, description }),
-          });
-          logs.push(await logStep(supabase, runId, step, "completed",
-            "Descricao do grupo atualizada.", { groupJid: clientGroupJid }));
-
-        } else if (step.id === "send_welcome_message") {
-          if (!clientGroupJid) {
-            hadSkippedRequiredStep = true;
-            logs.push(await logStep(supabase, runId, step, "skipped", "Grupo sem JID para mensagem de boas-vindas."));
-            continue;
-          }
-          const text = renderTemplate(
-            getMessage(state, "msg_welcome", "Bem-vindo ao projeto {{nome_projeto}}, {{nome_cliente}}!"),
-            variables,
-          );
-          await sendText(clientGroupJid, text);
-          logs.push(await logStep(supabase, runId, step, "completed", "Mensagem de boas-vindas enviada no grupo do cliente."));
-
-        } else if (step.id === "notify_internal_group") {
-          const internalGroupId = String(step.config?.internalGroupId ?? "");
-          if (!internalGroupId) {
-            hadSkippedRequiredStep = true;
-            logs.push(await logStep(supabase, runId, step, "skipped", "Grupo interno nao selecionado."));
-            continue;
-          }
-          const text = renderTemplate(
-            getMessage(state, "msg_internal_notify", "Novo cliente onboardado: {{nome_cliente}}"),
-            variables,
-          );
-          await sendText(internalGroupId, text);
-          logs.push(await logStep(supabase, runId, step, "completed", "Grupo interno notificado."));
-
-        } else if (step.id === "send_briefing_form") {
-          if (!clientPhone) throw new Error("Cliente sem telefone para envio do briefing.");
-          const template = getMessage(state, "msg_send_briefing",
-            "Preencha o briefing do projeto, {{nome_cliente}}: {{link_formulario_briefing}}");
-          const text = renderTemplate(
-            template
-              .replace("[Clique aqui para preencher]", "{{link_formulario_briefing}}")
-              .replace("[link em configuracao]", "{{link_formulario_briefing}}"),
-            variables,
-          );
-          await sendText(clientPhone, text);
-          logs.push(await logStep(supabase, runId, step, "completed", "Formulario de briefing enviado por WhatsApp."));
-
-        } else if (step.id === "finalize_onboarding") {
-          // Create project from operational template configured on step (or first available)
-          const templateId = String(step.config?.templateId ?? "");
-          const baseQuery = supabase
-            .from("agency_templates")
-            .select("*, template_columns(*), template_tasks(*, template_task_checklists(*))");
-          const { data: tmpl } = templateId
-            ? await baseQuery.eq("id", templateId).maybeSingle()
-            : await baseQuery.order("created_at", { ascending: false }).limit(1).maybeSingle();
-
-          if (!tmpl) {
-            logs.push(await logStep(supabase, runId, step, "completed",
-              "Onboarding finalizado. Nenhum template operacional configurado — projeto nao criado automaticamente."));
-          } else {
-            const projectName = renderTemplate(
-              String(step.config?.projectNamePattern ?? tmpl.name ?? "Projeto {{nome_cliente}}"),
-              variables,
-            );
-            const { data: project, error: projError } = await supabase
-              .from("projects")
-              .insert({
-                agency_id: agencyId,
-                client_id: client.id,
-                name: projectName,
-                description: tmpl.description ?? null,
-                status: "planning",
-                source: "automation",
-                template_id: tmpl.id,
-              })
-              .select()
-              .single();
-            if (projError) throw projError;
-
-            // Create columns
-            const colMap: Record<string, string> = {};
-            for (const col of (tmpl.template_columns ?? [])) {
-              const { data: newCol } = await supabase
-                .from("project_columns")
-                .insert({
-                  agency_id: agencyId,
-                  project_id: project.id,
-                  title: col.title,
-                  position: col.position,
-                  color: col.color ?? null,
-                })
-                .select()
-                .single();
-              if (newCol) colMap[col.id] = newCol.id;
-            }
-
-            // Create tasks with assignee resolution
-            for (const task of (tmpl.template_tasks ?? [])) {
-              let assigneeId: string | null = null;
-              const rule = task.assignee_rule as { type?: string; value?: string; fallback?: string } | null;
-
-              if (rule?.type === "specific_user" && rule.value) {
-                assigneeId = rule.value;
-              } else if (rule?.type === "role" && rule.value && agencyId) {
-                const { data: roleData } = await supabase
-                  .from("agency_roles").select("id")
-                  .eq("agency_id", agencyId).eq("name", rule.value).maybeSingle();
-                if (roleData) {
-                  const { data: member } = await supabase
-                    .from("users").select("id")
-                    .eq("agency_id", agencyId).eq("agency_role_id", roleData.id).limit(1).maybeSingle();
-                  if (member) assigneeId = member.id;
-                }
-              } else if (rule?.type === "project_manager" && agencyId) {
-                const { data: manager } = await supabase
-                  .from("users").select("id")
-                  .eq("agency_id", agencyId).in("role", ["owner", "admin", "manager"]).limit(1).maybeSingle();
-                if (manager) assigneeId = manager.id;
-              }
-
-              if (!assigneeId && rule?.fallback !== "unassigned" && agencyId) {
-                const { data: fallback } = await supabase
-                  .from("users").select("id")
-                  .eq("agency_id", agencyId).in("role", ["owner", "admin"]).limit(1).maybeSingle();
-                if (fallback) assigneeId = fallback.id;
-              }
-
-              const { data: newTask } = await supabase
-                .from("project_tasks")
-                .insert({
-                  agency_id: agencyId,
-                  project_id: project.id,
-                  column_id: colMap[task.column_id ?? ""] ?? null,
-                  title: renderTemplate(task.title ?? "", variables),
-                  description: task.description ?? null,
-                  priority: task.priority ?? "medium",
-                  status: "backlog",
-                  assignee_id: assigneeId,
-                  source: "template",
-                })
-                .select()
-                .single();
-
-              // Create checklists
-              if (newTask && (task.template_task_checklists?.length ?? 0) > 0) {
-                for (const item of task.template_task_checklists) {
-                  await supabase.from("project_task_checklists").insert({
-                    task_id: newTask.id,
-                    title: renderTemplate(item.title ?? "", variables),
-                    is_checked: false,
-                  });
-                }
-              }
-            }
-
-            logs.push(await logStep(supabase, runId, step, "completed",
-              `Onboarding finalizado. Projeto "${projectName}" criado com ${tmpl.template_tasks?.length ?? 0} tarefa(s).`,
-              { projectId: project.id, templateId: tmpl.id }));
-          }
-
+        // ── All other steps — delegated to shared executeStep ────────────────
         } else {
-          hadSkippedRequiredStep = true;
-          logs.push(await logStep(supabase, runId, step, "skipped", "Etapa ainda sem executor real."));
+          // Build logStep adapter for shared executor
+          const sharedLogStep = async (_stepId: string, _stepType: string, status: "completed" | "skipped" | "failed", message: string, output?: Record<string, unknown>) => {
+            await logStep(supabase, runId, { id: step.id, name: step.name, description: step.description, enabled: step.enabled }, status, message, output ?? {});
+          };
+
+          const result = await executeStep(
+            {
+              supabase,
+              agencyId: agencyId ?? "",
+              clientId,
+              client,
+              variables,
+              baseUrl,
+              instanceKey: instanceApiKey,
+              instanceName,
+              clientGroupJid,
+              setClientGroupJid: (jid) => { clientGroupJid = jid; },
+              contractId: generatedContract?.id ?? null,
+              context: currentContext,
+              setContext: (ctx) => { currentContext = ctx; },
+              logs: logs as string[],
+              logStep: sharedLogStep,
+            },
+            { id: step.id, type: step.id, config: step.config },
+          );
+
+          if (result === "pause") {
+            await supabase.from("onboarding_runs")
+              .update({ status: "awaiting_form", context: { ...runContext, awaitingStep: step.id } })
+              .eq("id", runId);
+            pausedForForm = true;
+            break;
+          }
         }
+
       } catch (stepError) {
         logs.push(await logStep(supabase, runId, step, "failed",
           stepError instanceof Error ? stepError.message : String(stepError)));
@@ -848,36 +486,25 @@ serve(async (req) => {
       }
     }
 
-    // Don't overwrite awaiting_form status
     if (!pausedForForm) {
       const finalStatus = hadSkippedRequiredStep ? "partial" : "completed";
-      await supabase
-        .from("onboarding_runs")
-        .update({ status: finalStatus, completed_at: new Date().toISOString() })
-        .eq("id", runId);
+      await supabase.from("onboarding_runs")
+        .update({ status: finalStatus, completed_at: new Date().toISOString() }).eq("id", runId);
     }
 
-    const { data: finalRun } = await supabase
-      .from("onboarding_runs").select("status").eq("id", runId).single();
+    const { data: finalRun } = await supabase.from("onboarding_runs").select("status").eq("id", runId).single();
+    return new Response(JSON.stringify({ runId, status: finalRun?.status ?? "completed", logs }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
 
-    return new Response(JSON.stringify({ runId, status: finalRun?.status ?? "completed", logs }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
   } catch (error) {
     if (runId) {
-      await supabase
-        .from("onboarding_runs")
-        .update({
-          status: "failed",
-          completed_at: new Date().toISOString(),
-          error_message: error instanceof Error ? error.message : String(error),
-        })
-        .eq("id", runId);
+      await supabase.from("onboarding_runs").update({
+        status: "failed", completed_at: new Date().toISOString(),
+        error_message: error instanceof Error ? error.message : String(error),
+      }).eq("id", runId);
     }
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : String(error), runId: runId || null, logs }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
-    );
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 });
   }
 });

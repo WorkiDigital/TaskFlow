@@ -128,6 +128,8 @@ export function TemplatesTab() {
   };
 
   const handlePublish = async (id: string) => {
+    const ok = window.confirm("Publicar este template? Ele ficará visível para uso em contratos de toda a agência.");
+    if (!ok) return;
     const res = await publishContractTemplate(id);
     if (res.error) toast.error(res.error);
     else {
